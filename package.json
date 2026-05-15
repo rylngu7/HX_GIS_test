@@ -1,0 +1,17 @@
+{
+  "name": "hx-spacetime-engine",
+  "version": "1.0.0",
+  "description": "HX时空计算引擎 - 时空数据可视化平台",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "build": "echo 'Build completed'"
+  },
+  "keywords": ["spacetime", "engine", "visualization"],
+  "author": "HX Team",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
