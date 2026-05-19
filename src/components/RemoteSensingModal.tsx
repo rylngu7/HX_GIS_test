@@ -18,7 +18,7 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   const [resultName, setResultName] = useState(() => `${toolName}-${generateRandomId()}`);
   const [selectedLayer, setSelectedLayer] = useState('');
   const [selectedAlgorithm, setSelectedAlgorithm] = useState(toolName);
-  const [autoCorrect, setAutoCorrect] = useState(true);
+  const [autoCorrect, setAutoCorrect] = useState(false);
   const [correctionValue, setCorrectionValue] = useState('0.15');
   const [fusionAlgorithm, setFusionAlgorithm] = useState('Brovey');
   const [baseImage, setBaseImage] = useState('');
@@ -36,6 +36,9 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   const [resolution, setResolution] = useState('2');
   const [overlapMethod, setOverlapMethod] = useState('第一个值');
   const [resampleMethod, setResampleMethod] = useState('nearest');
+  // 预处理流程相关状态
+  const [preprocessAutoCorrect, setPreprocessAutoCorrect] = useState(false);
+  const [preprocessCorrectionValue, setPreprocessCorrectionValue] = useState('0.15');
 
   // 当 toolName 变化时更新 resultName
   useMemo(() => {
@@ -147,6 +150,21 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             <div className="flex-1">
               <div className="text-sm font-medium text-gray-800">辐射校正</div>
               <div className="text-xs text-gray-500 mt-1">消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。</div>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={preprocessAutoCorrect}
+                  onChange={(e) => setPreprocessAutoCorrect(e.target.checked)}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <label className="text-sm text-gray-700">大气校正</label>
+                <input
+                  type="text"
+                  value={preprocessCorrectionValue}
+                  onChange={(e) => setPreprocessCorrectionValue(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
             </div>
           </div>
 
