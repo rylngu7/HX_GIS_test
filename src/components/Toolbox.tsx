@@ -44,6 +44,7 @@ const Toolbox: React.FC = () => {
   ];
 
   const remoteSensingProcessingTools = [
+    { name: '预处理流程', icon: 'process', disabled: false },
     { name: '辐射定标', icon: 'radiation', disabled: false },
     { name: '几何校正', icon: 'geometry', disabled: false },
     { name: '大气校正', icon: 'atmosphere', disabled: false },
@@ -255,6 +256,14 @@ const Toolbox: React.FC = () => {
             <rect x="12" y="6" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
             <rect x="6" y="12" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
             <rect x="12" y="12" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'process':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <path d="M12 2L20 6L20 10L12 14L4 10L4 6L12 2Z" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M12 14L12 18" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="12" cy="20" r="2" fill="currentColor" />
           </svg>
         );
       default:
