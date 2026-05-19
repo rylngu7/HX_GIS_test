@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遥感算法平台 - 原型展示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            background: #f0f0f0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3b82f6;
+        }
+        
+        .main-interface {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        
+        .main-interface-inner {
+            height: 500px;
+            position: relative;
+            background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 头部样式
+        .header {
+            background: #2563eb;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .header-btn {
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: default;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 60px;
+            background: #1f2937;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 12px;
+            gap: 12px;
+        }
+        
+        .sidebar-item {
+            width: 40px;
+            height: 40px;
+            background: #374151;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+        }
+        
+        .sidebar-item.active {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .map-view {
+            flex: 1;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect fill="%23e2e8f0" width="400" height="300"/><text x="50%" y="50%" text-anchor="middle" fill="%2394a3b8" font-size="18">底图区域</text></svg>');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        
+        .map-overlay {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .map-btn {
+            width: 36px;
+            height: 36px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .toolbox-container {
+            position: absolute;
+            right: 60px;
+            top: 60px;
+            width: 300px;
+        }
+        
+        .toolbox-header {
+            background: #2563eb;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .toolbox-content {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 380px;
+            overflow-y: auto;
+        }
+        
+        .tool-section {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .tool-section-title {
+            padding: 10px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .tool-list {
+            padding: 8px 12px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            background: #f9fafb;
+        }
+        
+        .tool-item {
+            padding: 6px 8px;
+            font-size: 12px;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 6px;
+            cursor: default;
+        }
+        
+        .tool-item:hover {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+        
+        .tool-item.disabled {
+            color: #9ca3af;
+        }
+        
+        .tool-icon {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modals-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .modal-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .modal-group-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+        
+        .modal-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 100%;
+        }
+        
+        .modal-header {
+            background: white;
+            padding: 10px 14px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .modal-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .modal-body {
+            padding: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+        
+        .form-label .required {
+            color: #dc2626;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            background: white;
+        }
+        
+        .input-counter {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            color: #9ca3af;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+        }
+        
+        .checkbox {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .checkbox-label {
+            font-size: 13px;
+            color: #374151;
+        }
+        
+        .process-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .process-step:last-child {
+            margin-bottom: 0;
+        }
+        
+        .step-icon {
+            width: 32px;
+            height: 32px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        
+        .step-icon.numbered {
+            background: #7c3aed;
+        }
+        
+        .step-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        
+        .step-desc {
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        
+        .step-config {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .config-input {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .divider {
+            border-top: 1px solid #e5e7eb;
+            margin: 12px 0;
+        }
+        
+        .modal-footer {
+            padding: 10px 14px;
+            background: #2563eb;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            padding: 6px 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .btn-secondary {
+            padding: 6px 16px;
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .small-btn {
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 12px;
+            background: white;
+            cursor: default;
+        }
+        
+        .auto-link {
+            font-size: 12px;
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        
+        .info-text {
+            font-size: 12px;
+            color: #6b7280;
+            background: #f9fafb;
+            padding: 10px;
+            border-radius: 6px;
+            line-height: 1.5;
+        }
+        
+        .label-with-icon {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .info-icon {
+            width: 14px;
+            height: 14px;
+            color: #9ca3af;
+        }
+        
+        .multi-select {
+            min-height: 80px;
+        }
+        
+        .footer-section {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding-top: 4px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .row-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-interface">
+            <div class="section-title">主界面</div>
+            <div class="main-interface-inner">
+                <div class="header">
+                    <div class="header-title">遥感算法平台 V1.0</div>
+                    <div class="header-actions">
+                        <div class="header-btn">帮助</div>
+                        <div class="header-btn">设置</div>
+                    </div>
+                </div>
+                <div class="main-content">
+                    <div class="sidebar">
+                        <div class="sidebar-item active">📊</div>
+                        <div class="sidebar-item">📍</div>
+                        <div class="sidebar-item">📁</div>
+                        <div class="sidebar-item">⚙️</div>
+                    </div>
+                    <div class="map-view">
+                        <div class="map-overlay">
+                            <div class="map-btn">+</div>
+                            <div class="map-btn">-</div>
+                            <div class="map-btn">🔍</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="toolbox-container">
+                    <div class="toolbox-header">
+                        <span>工具箱</span>
+                        <span>▲</span>
+                    </div>
+                    <div class="toolbox-content">
+                        <div class="tool-section">
+                            <div class="tool-section-title">空间分析</div>
+                            <div class="tool-list">
+                                <div class="tool-item disabled">
+                                    <span class="tool-icon">⊞</span>
+                                    叠置分析
+                                </div>
+                                <div class="tool-item disabled">
+                                    <span class="tool-icon">⊞</span>
+                                    高级叠置分析
+                                </div>
+                                <div class="tool-item disabled">
+                                    <span class="tool-icon">○</span>
+                                    缓冲区分析
+                                </div>
+                                <div class="tool-item disabled">
+                                    <span class="tool-icon">○</span>
+                                    多重缓冲区分析
+                                </div>
+                                <div class="tool-item disabled">
+                                    <span class="tool-icon">◎</span>
+                                    非对称缓冲区分析
+                                </div>
+                                <div class="tool-item disabled">
+                                    <span class="tool-icon">◎</span>
+                                    字段缓冲区分析
+                                </div>
+                                <div class="tool-item disabled">
+                                    <span class="tool-icon">✕</span>
+                                    空间关系分析
+                                </div>
+                                <div class="tool-item disabled">
+                                    <span class="tool-icon">✕</span>
+                                    数据检查
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tool-section">
+                            <div class="tool-section-title">几何分析</div>
+                            <div class="tool-list">
+                                <div class="tool-item">
+                                    <span class="tool-icon">▭</span>
+                                    投影系统转换
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tool-section">
+                            <div class="tool-section-title">遥感算法</div>
+                            <div style="padding: 8px 12px;">
+                                <div style="font-size: 12px; font-weight: 500; color: #6b7280; padding: 4px 8px;">遥感识别</div>
+                                <div class="tool-list" style="padding-top: 4px;">
+                                    <div class="tool-item">
+                                        <span class="tool-icon">▣</span>
+                                        车辆目标识别
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">╋</span>
+                                        路口目标识别
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">⌂</span>
+                                        桥梁目标识别
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">↗</span>
+                                        机场目标识别
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">✈</span>
+                                        飞机目标识别
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">⊙</span>
+                                        油罐目标识别
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">🚢</span>
+                                        舰船目标识别
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">🏢</span>
+                                        建筑物提取
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">🏠</span>
+                                        部落房屋提取
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">═</span>
+                                        道路提取
+                                    </div>
+                                </div>
+                                
+                                <div style="font-size: 12px; font-weight: 500; color: #6b7280; padding: 8px 8px 4px;">遥感处理</div>
+                                <div class="tool-list">
+                                    <div class="tool-item">
+                                        <span class="tool-icon">⬡</span>
+                                        预处理流程
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">⊕</span>
+                                        辐射定标
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">▢</span>
+                                        几何校正
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">☁</span>
+                                        大气校正
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">⊞</span>
+                                        正射校正
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">⊠</span>
+                                        影像融合
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">○○</span>
+                                        影像匀色
+                                    </div>
+                                    <div class="tool-item">
+                                        <span class="tool-icon">⊞⊞</span>
+                                        影像镶嵌
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tool-section" style="border-bottom: none;">
+                            <div class="tool-section-title">地图输出</div>
+                            <div class="tool-list">
+                                <div class="tool-item">
+                                    <span class="tool-icon">📷</span>
+                                    截图
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section-title">遥感识别 - 弹窗</div>
+        <div class="modals-section">
+            <div class="modal-group">
+                <div class="modal-group-title">基础识别类</div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">车辆目标识别</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="车辆目标识别-ABC12" maxlength="20">
+                                <span class="input-counter">13/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像1.tif</option>
+                                <option>影像2.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>车辆目标识别</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">路口目标识别</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="路口目标识别-DEF34" maxlength="20">
+                                <span class="input-counter">13/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像1.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>路口目标识别</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">桥梁目标识别</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="桥梁目标识别-GHI56" maxlength="20">
+                                <span class="input-counter">13/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像2.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>桥梁目标识别</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div class="modal-group">
+                <div class="modal-group-title">机场与交通</div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">机场目标识别</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="机场目标识别-JKL78" maxlength="20">
+                                <span class="input-counter">13/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像3.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>机场目标识别</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">飞机目标识别</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="飞机目标识别-MNO90" maxlength="20">
+                                <span class="input-counter">13/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像1.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>飞机目标识别</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">油罐目标识别</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="油罐目标识别-PQR12" maxlength="20">
+                                <span class="input-counter">13/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像2.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>油罐目标识别</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-group">
+                <div class="modal-group-title">建筑与提取</div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">舰船目标识别</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="舰船目标识别-STU34" maxlength="20">
+                                <span class="input-counter">13/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像3.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>舰船目标识别</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">建筑物提取</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="建筑物提取-VWX56" maxlength="20">
+                                <span class="input-counter">11/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像1.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>建筑物提取</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">部落房屋提取</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="部落房屋提取-YZA78" maxlength="20">
+                                <span class="input-counter">13/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 图层数据</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像2.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                            <select class="form-select">
+                                <option>部落房屋提取</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modals-section">
+            <div class="modal-group" style="grid-column: 1 / -1;">
+                <div class="modal-group-title">道路提取</div>
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <div class="modal-card" style="width: 320px;">
+                        <div class="modal-header">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: #6b7280;">←</span>
+                            </div>
+                            <div class="modal-title">道路提取</div>
+                            <div style="width: 24px;"></div>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label"><span class="required">*</span> 结果名称</label>
+                                <div class="input-wrapper">
+                                    <input type="text" class="form-input" value="道路提取-BCD90" maxlength="20">
+                                    <span class="input-counter">9/20</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label label-with-icon">
+                                    <span><span class="required">*</span> 图层数据</span>
+                                    <span class="info-icon">ℹ</span>
+                                </label>
+                                <select class="form-select">
+                                    <option>请选择</option>
+                                    <option>影像3.tif</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><span class="required">*</span> 目标算法模型</label>
+                                <select class="form-select">
+                                    <option>道路提取</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn-primary">开始执行</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section-title">遥感处理 - 弹窗</div>
+        <div class="modals-section">
+            <div class="modal-group">
+                <div class="modal-group-title">预处理流程类</div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">预处理流程</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="预处理流程-EFG12" maxlength="20">
+                                <span class="input-counter">11/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 图层数据</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像1.tif</option>
+                            </select>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div class="row-label">数据处理流程</div>
+                        
+                        <div class="process-step">
+                            <div class="step-icon">✓</div>
+                            <div class="step-content">
+                                <div class="step-title">辐射校正</div>
+                                <div class="step-desc">消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。</div>
+                                <div class="step-config">
+                                    <input type="checkbox" class="checkbox">
+                                    <label class="checkbox-label">大气校正</label>
+                                    <input type="text" class="config-input" value="0.15">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="process-step">
+                            <div class="step-icon">✓</div>
+                            <div class="step-content">
+                                <div class="step-title">几何校正</div>
+                                <div class="step-desc">消除或改正遥感影像几何误差，系统根据数据类型自动处理。</div>
+                            </div>
+                        </div>
+                        
+                        <div class="process-step">
+                            <div class="step-icon step-icon.numbered">3</div>
+                            <div class="step-content">
+                                <div class="step-title">影像融合</div>
+                                <div class="step-desc" style="margin-bottom: 8px;">影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。</div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 13px; color: #374151;">算法</span>
+                                    <select class="form-select" style="flex: 1;">
+                                        <option>Brovey</option>
+                                        <option>PCA</option>
+                                        <option>SFIM</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">辐射定标</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="辐射定标-HIJ34" maxlength="20">
+                                <span class="input-counter">9/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 图层数据</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像2.tif</option>
+                            </select>
+                        </div>
+                        <div class="info-text">
+                            消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-group">
+                <div class="modal-group-title">校正类</div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">大气校正</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="大气校正-KLM56" maxlength="20">
+                                <span class="input-counter">9/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 图层数据</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像1.tif</option>
+                            </select>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" class="checkbox">
+                            <label class="checkbox-label">系统根据数据类型自动处理</label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">校正值</label>
+                            <input type="text" class="form-input" value="0.15">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">几何校正</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="几何校正-NOP78" maxlength="20">
+                                <span class="input-counter">9/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 图层数据</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像3.tif</option>
+                            </select>
+                        </div>
+                        <div class="info-text">
+                            消除或改正遥感影像几何误差，系统根据数据类型自动处理。
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">正射校正</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="正射校正-QRS90" maxlength="20">
+                                <span class="input-counter">9/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 基准影像</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>基准1.tif</option>
+                                <option>基准2.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 校正影像</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>待校正1.tif</option>
+                                <option>待校正2.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <label class="form-label" style="margin-bottom: 0;"><span class="required">*</span> 控制点</label>
+                                <span class="auto-link">自动配准</span>
+                            </div>
+                            <div class="control-buttons">
+                                <button class="small-btn" style="flex: 1;">+ 新增控制点</button>
+                                <button class="small-btn" style="width: 36px; padding: 6px;">🗑</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-group">
+                <div class="modal-group-title">融合与镶嵌</div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">影像融合</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="影像融合-TUV12" maxlength="20">
+                                <span class="input-counter">9/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 图层数据</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>影像1.tif</option>
+                                <option>影像2.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 算法</label>
+                            <select class="form-select">
+                                <option>Brovey</option>
+                                <option>PCA</option>
+                                <option>SFIM</option>
+                            </select>
+                        </div>
+                        <div class="info-text">
+                            影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">影像匀色</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="影像匀色-WXY34" maxlength="20">
+                                <span class="input-counter">9/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 颜色空间类型</label>
+                            <select class="form-select">
+                                <option>RGB</option>
+                                <option>HSV</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 基准数据</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>基准1.tif</option>
+                            </select>
+                        </div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label class="form-label"><span class="required">*</span> R</label>
+                                <select class="form-select">
+                                    <option>请选择</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><span class="required">*</span> G</label>
+                                <select class="form-select">
+                                    <option>请选择</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><span class="required">*</span> B</label>
+                                <select class="form-select">
+                                    <option>请选择</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 匀色数据</label>
+                            <select class="form-select">
+                                <option>请选择</option>
+                                <option>待匀色1.tif</option>
+                            </select>
+                        </div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label class="form-label"><span class="required">*</span> R</label>
+                                <select class="form-select">
+                                    <option>请选择</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><span class="required">*</span> G</label>
+                                <select class="form-select">
+                                    <option>请选择</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><span class="required">*</span> B</label>
+                                <select class="form-select">
+                                    <option>请选择</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+                
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280;">←</span>
+                        </div>
+                        <div class="modal-title">影像镶嵌</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 结果名称</label>
+                            <div class="input-wrapper">
+                                <input type="text" class="form-input" value="影像镶嵌-ZAB56" maxlength="20">
+                                <span class="input-counter">9/20</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 图层数据</label>
+                            <select class="form-select multi-select" multiple size="4">
+                                <option>影像1.tif</option>
+                                <option>影像2.tif</option>
+                                <option>影像3.tif</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label label-with-icon">
+                                <span><span class="required">*</span> 分辨率</span>
+                                <span class="info-icon">ℹ</span>
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="text" class="form-input" value="2" style="flex: 1;">
+                                <span style="font-size: 13px; color: #6b7280;">m</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 重叠区域镶嵌方法</label>
+                            <select class="form-select">
+                                <option>第一个值</option>
+                                <option>最后一个值</option>
+                                <option>最小值</option>
+                                <option>最大值</option>
+                                <option>平均值</option>
+                                <option>中位值</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"><span class="required">*</span> 重采样方法</label>
+                            <select class="form-select">
+                                <option>nearest</option>
+                                <option>bilinear</option>
+                                <option>cubic</option>
+                                <option>mode</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-primary">开始执行</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section-title">其他功能 - 弹窗</div>
+        <div style="display: flex; gap: 24px;">
+            <div class="modal-card" style="width: 320px;">
+                <div class="modal-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #6b7280;">←</span>
+                    </div>
+                    <div class="modal-title">投影系统转换</div>
+                    <div style="width: 24px;"></div>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label"><span class="required">*</span> 结果名称</label>
+                        <div class="input-wrapper">
+                            <input type="text" class="form-input" value="投影系统转换-CDE78" maxlength="20">
+                            <span class="input-counter">13/20</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><span class="required">*</span> 图层数据</label>
+                        <select class="form-select">
+                            <option>请选择</option>
+                            <option>影像1.tif</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary">开始执行</button>
+                </div>
+            </div>
+            
+            <div class="modal-card" style="width: 320px;">
+                <div class="modal-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #6b7280;">←</span>
+                    </div>
+                    <div class="modal-title">截图</div>
+                    <div style="width: 24px;"></div>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label"><span class="required">*</span> 结果名称</label>
+                        <div class="input-wrapper">
+                            <input type="text" class="form-input" value="截图-FGH90" maxlength="20">
+                            <span class="input-counter">7/20</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><span class="required">*</span> 图层数据</label>
+                        <select class="form-select">
+                            <option>请选择</option>
+                            <option>影像2.tif</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary">开始执行</button>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; padding: 40px 0; color: #9ca3af; font-size: 13px;">
+            原型展示页面 - 用于 Refore HTML to Pixso 转换
+        </div>
+    </div>
+</body>
+</html>
