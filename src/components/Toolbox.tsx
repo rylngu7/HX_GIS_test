@@ -27,7 +27,7 @@ const Toolbox: React.FC = () => {
   ];
 
   const geometryAnalysisTools = [
-    { name: '投影系统转换', icon: 'projection', disabled: false },
+    { name: '投影系统转换', icon: 'projection', disabled: false, noModal: true },
   ];
 
   const remoteSensingRecognitionTools = [
@@ -55,11 +55,11 @@ const Toolbox: React.FC = () => {
   ];
 
   const mapOutputTools = [
-    { name: '截图', icon: 'screenshot', disabled: false },
+    { name: '截图', icon: 'screenshot', disabled: false, noModal: true },
   ];
 
-  const handleToolClick = (toolName: string, disabled: boolean) => {
-    if (!disabled) {
+  const handleToolClick = (toolName: string, disabled: boolean, noModal?: boolean) => {
+    if (!disabled && !noModal) {
       setActiveModal(toolName);
     }
   };
@@ -338,7 +338,7 @@ const Toolbox: React.FC = () => {
                         tool.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
                       }`}
                       disabled={tool.disabled}
-                      onClick={() => handleToolClick(tool.name, tool.disabled)}
+                      onClick={() => handleToolClick(tool.name, tool.disabled, tool.noModal)}
                     >
                       {renderIcon(tool.icon, tool.disabled)}
                       <span className="whitespace-nowrap">{tool.name}</span>
@@ -418,7 +418,7 @@ const Toolbox: React.FC = () => {
                         tool.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
                       }`}
                       disabled={tool.disabled}
-                      onClick={() => handleToolClick(tool.name, tool.disabled)}
+                      onClick={() => handleToolClick(tool.name, tool.disabled, tool.noModal)}
                     >
                       {renderIcon(tool.icon, tool.disabled)}
                       <span className="whitespace-nowrap">{tool.name}</span>

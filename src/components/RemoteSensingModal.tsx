@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Info, Plus, Trash2, ChevronRight } from 'lucide-react';
 
 interface RemoteSensingModalProps {
@@ -14,9 +14,33 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   onClose,
   toolName
 }) => {
-  // 基础状态
-  const [resultName, setResultName] = useState(`${toolName}-${generateRandomId()}`);
+  // 所有状态移到组件顶层
+  const [resultName, setResultName] = useState(() => `${toolName}-${generateRandomId()}`);
   const [selectedLayer, setSelectedLayer] = useState('');
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState(toolName);
+  const [autoCorrect, setAutoCorrect] = useState(true);
+  const [correctionValue, setCorrectionValue] = useState('0.15');
+  const [fusionAlgorithm, setFusionAlgorithm] = useState('Brovey');
+  const [baseImage, setBaseImage] = useState('');
+  const [correctionImage, setCorrectionImage] = useState('');
+  const [controlPoints, setControlPoints] = useState<Array<{id: number, x: number, y: number}>>([]);
+  const [colorSpace, setColorSpace] = useState('RGB');
+  const [baseData, setBaseData] = useState('');
+  const [baseR, setBaseR] = useState('');
+  const [baseG, setBaseG] = useState('');
+  const [baseB, setBaseB] = useState('');
+  const [colorData, setColorData] = useState('');
+  const [colorR, setColorR] = useState('');
+  const [colorG, setColorG] = useState('');
+  const [colorB, setColorB] = useState('');
+  const [resolution, setResolution] = useState('2');
+  const [overlapMethod, setOverlapMethod] = useState('第一个值');
+  const [resampleMethod, setResampleMethod] = useState('nearest');
+
+  // 当 toolName 变化时更新 resultName
+  useMemo(() => {
+    setResultName(`${toolName}-${generateRandomId()}`);
+  }, [toolName]);
 
   if (!isOpen) return null;
 
@@ -25,688 +49,643 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     onClose();
   };
 
-  const handleReset = () => {
-    setResultName(`${toolName}-${generateRandomId()}`);
-    setSelectedLayer('');
-  };
-
-  // 渲染遥感识别类界面（车辆识别等）
-  const renderRecognitionInterface = () => {
-    const [selectedAlgorithm, setSelectedAlgorithm] = useState(toolName);
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <span className="text-red-500">*</span> 图层数据
-            <Info size={14} className="text-gray-400" />
-          </label>
-          <select
-            value={selectedLayer}
-            onChange={(e) => setSelectedLayer(e.target.value)}
+  // 渲染遥感识别类界面
+  const renderRecognitionInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="影像1.tif">影像1.tif</option>
-            <option value="影像2.tif">影像2.tif</option>
-            <option value="影像3.tif">影像3.tif</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 目标算法模型
-          </label>
-          <select
-            value={selectedAlgorithm}
-            onChange={(e) => setSelectedAlgorithm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value={toolName}>{toolName}</option>
-          </select>
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
         </div>
       </div>
-    );
-  };
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <span className="text-red-500">*</span> 图层数据
+          <Info size={14} className="text-gray-400" />
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="影像1.tif">影像1.tif</option>
+          <option value="影像2.tif">影像2.tif</option>
+          <option value="影像3.tif">影像3.tif</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 目标算法模型
+        </label>
+        <select
+          value={selectedAlgorithm}
+          onChange={(e) => setSelectedAlgorithm(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value={toolName}>{toolName}</option>
+        </select>
+      </div>
+    </div>
+  );
 
   // 渲染预处理流程界面
-  const renderPreprocessInterface = () => {
-    const [atmosphereChecked, setAtmosphereChecked] = useState(true);
-    const [atmosphereValue, setAtmosphereValue] = useState('0.15');
-    const [fusionAlgorithm, setFusionAlgorithm] = useState('Brovey');
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 图层数据
-          </label>
-          <select
-            value={selectedLayer}
-            onChange={(e) => setSelectedLayer(e.target.value)}
+  const renderPreprocessInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="影像1.tif">影像1.tif</option>
-            <option value="影像2.tif">影像2.tif</option>
-          </select>
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
         </div>
+      </div>
 
-        <div className="border-t pt-4">
-          <div className="text-sm font-medium text-gray-700 mb-3">数据处理流程</div>
-          
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">✓</div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-gray-800">辐射校正</div>
-                <div className="text-xs text-gray-500 mt-1">消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。</div>
-              </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 图层数据
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="影像1.tif">影像1.tif</option>
+          <option value="影像2.tif">影像2.tif</option>
+        </select>
+      </div>
+
+      <div className="border-t pt-4">
+        <div className="text-sm font-medium text-gray-700 mb-3">数据处理流程</div>
+        
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">✓</div>
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-800">辐射校正</div>
+              <div className="text-xs text-gray-500 mt-1">消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。</div>
             </div>
+          </div>
 
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">✓</div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-gray-800">几何校正</div>
-                <div className="text-xs text-gray-500 mt-1">消除或改正遥感影像几何误差，系统根据数据类型自动处理。</div>
-              </div>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">✓</div>
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-800">几何校正</div>
+              <div className="text-xs text-gray-500 mt-1">消除或改正遥感影像几何误差，系统根据数据类型自动处理。</div>
             </div>
+          </div>
 
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">3</div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-gray-800 mb-2">影像融合</div>
-                <div className="text-xs text-gray-500 mb-2">影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。</div>
-                <div className="flex items-center gap-3">
-                  <label className="text-sm text-gray-700">算法</label>
-                  <select
-                    value={fusionAlgorithm}
-                    onChange={(e) => setFusionAlgorithm(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="Brovey">Brovey</option>
-                    <option value="PCA">PCA</option>
-                    <option value="SFIM">SFIM</option>
-                  </select>
-                </div>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">3</div>
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-800 mb-2">影像融合</div>
+              <div className="text-xs text-gray-500 mb-2">影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。</div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-gray-700">算法</label>
+                <select
+                  value={fusionAlgorithm}
+                  onChange={(e) => setFusionAlgorithm(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="Brovey">Brovey</option>
+                  <option value="PCA">PCA</option>
+                  <option value="SFIM">SFIM</option>
+                </select>
               </div>
             </div>
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   // 辐射定标/几何校正界面
-  const renderStandardProcessingInterface = (description: string) => {
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 图层数据
-          </label>
-          <select
-            value={selectedLayer}
-            onChange={(e) => setSelectedLayer(e.target.value)}
+  const renderStandardProcessingInterface = (description: string) => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="影像1.tif">影像1.tif</option>
-            <option value="影像2.tif">影像2.tif</option>
-          </select>
-        </div>
-
-        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-          {description}
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
         </div>
       </div>
-    );
-  };
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 图层数据
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="影像1.tif">影像1.tif</option>
+          <option value="影像2.tif">影像2.tif</option>
+        </select>
+      </div>
+
+      <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+        {description}
+      </div>
+    </div>
+  );
 
   // 大气校正界面
-  const renderAtmosphereCorrectionInterface = () => {
-    const [autoCorrect, setAutoCorrect] = useState(true);
-    const [correctionValue, setCorrectionValue] = useState('0.15');
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 图层数据
-          </label>
-          <select
-            value={selectedLayer}
-            onChange={(e) => setSelectedLayer(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="影像1.tif">影像1.tif</option>
-            <option value="影像2.tif">影像2.tif</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-3">
+  const renderAtmosphereCorrectionInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
           <input
-            type="checkbox"
-            checked={autoCorrect}
-            onChange={(e) => setAutoCorrect(e.target.checked)}
-            className="w-4 h-4 text-blue-600"
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            maxLength={20}
           />
-          <label className="text-sm text-gray-700">系统根据数据类型自动处理</label>
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
         </div>
-
-        {!autoCorrect && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              校正值
-            </label>
-            <input
-              type="text"
-              value={correctionValue}
-              onChange={(e) => setCorrectionValue(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        )}
       </div>
-    );
-  };
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 图层数据
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="影像1.tif">影像1.tif</option>
+          <option value="影像2.tif">影像2.tif</option>
+        </select>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={autoCorrect}
+          onChange={(e) => setAutoCorrect(e.target.checked)}
+          className="w-4 h-4 text-blue-600"
+        />
+        <label className="text-sm text-gray-700">系统根据数据类型自动处理</label>
+      </div>
+
+      {!autoCorrect && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            校正值
+          </label>
+          <input
+            type="text"
+            value={correctionValue}
+            onChange={(e) => setCorrectionValue(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      )}
+    </div>
+  );
 
   // 影像融合界面
-  const renderFusionInterface = () => {
-    const [fusionAlgorithm, setFusionAlgorithm] = useState('Brovey');
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 图层数据
-          </label>
-          <select
-            value={selectedLayer}
-            onChange={(e) => setSelectedLayer(e.target.value)}
+  const renderFusionInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="影像1.tif">影像1.tif</option>
-            <option value="影像2.tif">影像2.tif</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 算法
-          </label>
-          <select
-            value={fusionAlgorithm}
-            onChange={(e) => setFusionAlgorithm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="Brovey">Brovey</option>
-            <option value="PCA">PCA</option>
-            <option value="SFIM">SFIM</option>
-          </select>
-        </div>
-
-        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-          影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
         </div>
       </div>
-    );
-  };
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 图层数据
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="影像1.tif">影像1.tif</option>
+          <option value="影像2.tif">影像2.tif</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 算法
+        </label>
+        <select
+          value={fusionAlgorithm}
+          onChange={(e) => setFusionAlgorithm(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="Brovey">Brovey</option>
+          <option value="PCA">PCA</option>
+          <option value="SFIM">SFIM</option>
+        </select>
+      </div>
+
+      <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+        影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。
+      </div>
+    </div>
+  );
 
   // 正射校正界面
-  const renderOrthoCorrectionInterface = () => {
-    const [baseImage, setBaseImage] = useState('');
-    const [correctionImage, setCorrectionImage] = useState('');
-    const [controlPoints, setControlPoints] = useState<Array<{id: number, x: number, y: number}>>([]);
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 基准影像
-          </label>
-          <select
-            value={baseImage}
-            onChange={(e) => setBaseImage(e.target.value)}
+  const renderOrthoCorrectionInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="基准1.tif">基准1.tif</option>
-            <option value="基准2.tif">基准2.tif</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 校正影像
-          </label>
-          <select
-            value={correctionImage}
-            onChange={(e) => setCorrectionImage(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="待校正1.tif">待校正1.tif</option>
-            <option value="待校正2.tif">待校正2.tif</option>
-          </select>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="block text-sm font-medium text-gray-700">
-              <span className="text-red-500">*</span> 控制点
-            </label>
-            <button className="text-blue-600 text-sm underline">自动配准</button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setControlPoints([...controlPoints, {id: Date.now(), x: 0, y: 0}])}
-              className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 flex-1"
-            >
-              <Plus size={14} />
-              新增控制点
-            </button>
-            <button className="p-2 border border-gray-300 rounded hover:bg-gray-50">
-              <Trash2 size={14} />
-            </button>
-          </div>
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
         </div>
       </div>
-    );
-  };
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 基准影像
+        </label>
+        <select
+          value={baseImage}
+          onChange={(e) => setBaseImage(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="基准1.tif">基准1.tif</option>
+          <option value="基准2.tif">基准2.tif</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 校正影像
+        </label>
+        <select
+          value={correctionImage}
+          onChange={(e) => setCorrectionImage(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="待校正1.tif">待校正1.tif</option>
+          <option value="待校正2.tif">待校正2.tif</option>
+        </select>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium text-gray-700">
+            <span className="text-red-500">*</span> 控制点
+          </label>
+          <button className="text-blue-600 text-sm underline">自动配准</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setControlPoints([...controlPoints, {id: Date.now(), x: 0, y: 0}])}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 flex-1"
+          >
+            <Plus size={14} />
+            新增控制点
+          </button>
+          <button className="p-2 border border-gray-300 rounded hover:bg-gray-50">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   // 影像匀色界面
-  const renderColorCorrectionInterface = () => {
-    const [colorSpace, setColorSpace] = useState('RGB');
-    const [baseData, setBaseData] = useState('');
-    const [baseR, setBaseR] = useState('');
-    const [baseG, setBaseG] = useState('');
-    const [baseB, setBaseB] = useState('');
-    const [colorData, setColorData] = useState('');
-    const [colorR, setColorR] = useState('');
-    const [colorG, setColorG] = useState('');
-    const [colorB, setColorB] = useState('');
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 颜色空间类型
-          </label>
-          <select
-            value={colorSpace}
-            onChange={(e) => setColorSpace(e.target.value)}
+  const renderColorCorrectionInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="RGB">RGB</option>
-            <option value="HSV">HSV</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 基准数据
-          </label>
-          <select
-            value={baseData}
-            onChange={(e) => setBaseData(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="基准1.tif">基准1.tif</option>
-          </select>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <span className="text-red-500">*</span> R
-            </label>
-            <select
-              value={baseR}
-              onChange={(e) => setBaseR(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">请选择</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <span className="text-red-500">*</span> G
-            </label>
-            <select
-              value={baseG}
-              onChange={(e) => setBaseG(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">请选择</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <span className="text-red-500">*</span> B
-            </label>
-            <select
-              value={baseB}
-              onChange={(e) => setBaseB(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">请选择</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 匀色数据
-          </label>
-          <select
-            value={colorData}
-            onChange={(e) => setColorData(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="待匀色1.tif">待匀色1.tif</option>
-          </select>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <span className="text-red-500">*</span> R
-            </label>
-            <select
-              value={colorR}
-              onChange={(e) => setColorR(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">请选择</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <span className="text-red-500">*</span> G
-            </label>
-            <select
-              value={colorG}
-              onChange={(e) => setColorG(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">请选择</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <span className="text-red-500">*</span> B
-            </label>
-            <select
-              value={colorB}
-              onChange={(e) => setColorB(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">请选择</option>
-            </select>
-          </div>
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
         </div>
       </div>
-    );
-  };
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 颜色空间类型
+        </label>
+        <select
+          value={colorSpace}
+          onChange={(e) => setColorSpace(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="RGB">RGB</option>
+          <option value="HSV">HSV</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 基准数据
+        </label>
+        <select
+          value={baseData}
+          onChange={(e) => setBaseData(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="基准1.tif">基准1.tif</option>
+        </select>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> R
+          </label>
+          <select
+            value={baseR}
+            onChange={(e) => setBaseR(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">请选择</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> G
+          </label>
+          <select
+            value={baseG}
+            onChange={(e) => setBaseG(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">请选择</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> B
+          </label>
+          <select
+            value={baseB}
+            onChange={(e) => setBaseB(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">请选择</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 匀色数据
+        </label>
+        <select
+          value={colorData}
+          onChange={(e) => setColorData(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="待匀色1.tif">待匀色1.tif</option>
+        </select>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> R
+          </label>
+          <select
+            value={colorR}
+            onChange={(e) => setColorR(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">请选择</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> G
+          </label>
+          <select
+            value={colorG}
+            onChange={(e) => setColorG(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">请选择</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> B
+          </label>
+          <select
+            value={colorB}
+            onChange={(e) => setColorB(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">请选择</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
 
   // 影像镶嵌界面
-  const renderMosaicInterface = () => {
-    const [resolution, setResolution] = useState('2');
-    const [overlapMethod, setOverlapMethod] = useState('第一个值');
-    const [resampleMethod, setResampleMethod] = useState('nearest');
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 图层数据
-          </label>
-          <select
-            value={selectedLayer}
-            onChange={(e) => setSelectedLayer(e.target.value)}
+  const renderMosaicInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            multiple
-            size={4}
-          >
-            <option value="影像1.tif">影像1.tif</option>
-            <option value="影像2.tif">影像2.tif</option>
-            <option value="影像3.tif">影像3.tif</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <span className="text-red-500">*</span> 分辨率
-            <Info size={14} className="text-gray-400" />
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <span className="text-sm text-gray-500">m</span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 重叠区域镶嵌方法
-          </label>
-          <select
-            value={overlapMethod}
-            onChange={(e) => setOverlapMethod(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="第一个值">第一个值</option>
-            <option value="最后一个值">最后一个值</option>
-            <option value="最小值">最小值</option>
-            <option value="最大值">最大值</option>
-            <option value="平均值">平均值</option>
-            <option value="中位值">中位值</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 重采样方法
-          </label>
-          <select
-            value={resampleMethod}
-            onChange={(e) => setResampleMethod(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="nearest">nearest</option>
-            <option value="bilinear">bilinear</option>
-            <option value="cubic">cubic</option>
-            <option value="mode">mode</option>
-          </select>
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
         </div>
       </div>
-    );
-  };
 
-  // 投影系统转换/截图 简单界面
-  const renderSimpleInterface = () => {
-    return (
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 结果名称
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={resultName}
-              onChange={(e) => setResultName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={20}
-            />
-            <span className="absolute right-3 top-2 text-xs text-gray-400">
-              {resultName.length}/20
-            </span>
-          </div>
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 图层数据
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          multiple
+          size={4}
+        >
+          <option value="影像1.tif">影像1.tif</option>
+          <option value="影像2.tif">影像2.tif</option>
+          <option value="影像3.tif">影像3.tif</option>
+        </select>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> 图层数据
-          </label>
-          <select
-            value={selectedLayer}
-            onChange={(e) => setSelectedLayer(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-            <option value="影像1.tif">影像1.tif</option>
-          </select>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <span className="text-red-500">*</span> 分辨率
+          <Info size={14} className="text-gray-400" />
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={resolution}
+            onChange={(e) => setResolution(e.target.value)}
+            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <span className="text-sm text-gray-500">m</span>
         </div>
       </div>
-    );
-  };
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 重叠区域镶嵌方法
+        </label>
+        <select
+          value={overlapMethod}
+          onChange={(e) => setOverlapMethod(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="第一个值">第一个值</option>
+          <option value="最后一个值">最后一个值</option>
+          <option value="最小值">最小值</option>
+          <option value="最大值">最大值</option>
+          <option value="平均值">平均值</option>
+          <option value="中位值">中位值</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 重采样方法
+        </label>
+        <select
+          value={resampleMethod}
+          onChange={(e) => setResampleMethod(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="nearest">nearest</option>
+          <option value="bilinear">bilinear</option>
+          <option value="cubic">cubic</option>
+          <option value="mode">mode</option>
+        </select>
+      </div>
+    </div>
+  );
+
+  // 简单界面
+  const renderSimpleInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 图层数据
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="影像1.tif">影像1.tif</option>
+        </select>
+      </div>
+    </div>
+  );
 
   // 决定渲染哪个界面
   const renderContent = () => {
