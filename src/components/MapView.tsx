@@ -1,48 +1,22 @@
-
 import React from 'react';
 import { Box, Layers as LayersIcon, Info, Maximize, Plus, Minus, Ruler } from 'lucide-react';
 
 const MapView: React.FC = () => {
   return (
     <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: '#f5f0e6' }}>
-      {/* 地图背景 */}
-      <div className="absolute inset-0">
-        <svg 
-          style={{ 
-            position: 'absolute', 
-            inset: 0, 
-            width: '100%', 
+      {/* 底图 */}
+      <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 1 }}>
+        <div 
+          className="relative"
+          style={{
+            width: '100%',
             height: '100%',
-            zIndex: 1
+            backgroundImage: 'url(/basemap.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
           }}
-          viewBox="0 0 1000 800" 
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <defs>
-            <pattern id="mapGrid" width="50" height="50" patternUnits="userSpaceOnUse">
-              <rect width="50" height="50" fill="#f5f0e6" />
-              <path d="M50 0 L0 0 0 50" fill="none" stroke="#ebe6dd" strokeWidth="0.5" />
-            </pattern>
-          </defs>
-          <rect width="1000" height="800" fill="url(#mapGrid)" />
-          <path d="M0 400 Q250 380 500 400 T1000 400" stroke="#e8dcc8" strokeWidth="6" fill="none" />
-          <path d="M500 0 Q520 200 500 400 T500 800" stroke="#e8dcc8" strokeWidth="6" fill="none" />
-          <text x="180" y="180" fontSize="12" fill="#666" opacity="0.7">恩古萨</text>
-          <text x="480" y="380" fontSize="12" fill="#666" opacity="0.7">瓦尔林加</text>
-        </svg>
-      </div>
-
-      {/* 遥感影像 */}
-      <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 5 }}>
-        <div className="relative" style={{ width: '700px', height: '500px', transform: 'rotate(-2deg)' }}>
-          <svg viewBox="0 0 700 500" style={{ width: '100%', height: '100%', backgroundColor: '#d8d4cc' }}>
-            <rect width="700" height="500" fill="#d8d4cc" />
-            <path d="M350 50 Q360 150 350 250 Q340 350 350 450" stroke="#a09a92" strokeWidth="20" fill="none" opacity="0.7" />
-            <ellipse cx="200" cy="350" rx="50" ry="35" fill="#7a8992" opacity="0.4" />
-            <rect x="260" y="160" width="120" height="100" fill="#b8b4ac" opacity="0.8" />
-          </svg>
-          <div className="absolute inset-0 border-2 border-dashed border-gray-500 rounded-sm" style={{ boxSizing: 'border-box' }} />
-        </div>
+        />
       </div>
 
       {/* 右侧工具栏 */}
