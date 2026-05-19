@@ -157,7 +157,7 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
                   onChange={(e) => setPreprocessAutoCorrect(e.target.checked)}
                   className="w-4 h-4 text-blue-600"
                 />
-                <label className="text-sm text-gray-700">大气校正</label>
+                <label className="text-sm text-gray-700 whitespace-nowrap">大气校正</label>
                 <input
                   type="text"
                   value={preprocessCorrectionValue}
