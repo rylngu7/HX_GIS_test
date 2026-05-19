@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon } from 'lucide-react';
+import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite } from 'lucide-react';
 
 const Toolbox: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [expandedSections, setExpandedSections] = useState<string[]>(['空间分析', '几何分析', '地图输出']);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['空间分析', '几何分析', '遥感算法', '地图输出']);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -27,6 +27,29 @@ const Toolbox: React.FC = () => {
 
   const geometryAnalysisTools = [
     { name: '投影系统转换', icon: 'projection', disabled: false },
+  ];
+
+  const remoteSensingRecognitionTools = [
+    { name: '车辆目标识别', icon: 'car', disabled: false },
+    { name: '路口目标识别', icon: 'intersection', disabled: false },
+    { name: '桥梁目标识别', icon: 'bridge', disabled: false },
+    { name: '机场目标识别', icon: 'airport', disabled: false },
+    { name: '飞机目标识别', icon: 'plane', disabled: false },
+    { name: '油罐目标识别', icon: 'tank', disabled: false },
+    { name: '舰船目标识别', icon: 'ship', disabled: false },
+    { name: '建筑物提取', icon: 'building', disabled: false },
+    { name: '部落房屋提取', icon: 'house', disabled: false },
+    { name: '道路提取', icon: 'road', disabled: false },
+  ];
+
+  const remoteSensingProcessingTools = [
+    { name: '辐射定标', icon: 'radiation', disabled: false },
+    { name: '几何校正', icon: 'geometry', disabled: false },
+    { name: '大气校正', icon: 'atmosphere', disabled: false },
+    { name: '正射校正', icon: 'ortho', disabled: false },
+    { name: '影像融合', icon: 'fusion', disabled: false },
+    { name: '影像匀色', icon: 'color', disabled: false },
+    { name: '影像镶嵌', icon: 'mosaic', disabled: false },
   ];
 
   const mapOutputTools = [
@@ -87,6 +110,146 @@ const Toolbox: React.FC = () => {
             <rect x="14" y="13" width="5" height="3" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         );
+      case 'car':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="6" y="10" width="12" height="8" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="10" cy="18" r="2" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="18" cy="18" r="2" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'intersection':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <path d="M4 12 L20 12" stroke="currentColor" strokeWidth="2" />
+            <path d="M12 4 L12 20" stroke="currentColor" strokeWidth="2" />
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          </svg>
+        );
+      case 'bridge':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="4" y="8" width="16" height="8" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="6" y="10" width="12" height="4" fill="currentColor" opacity="0.3" />
+            <rect x="4" y="10" width="2" height="4" fill="currentColor" />
+            <rect x="18" y="10" width="2" height="4" fill="currentColor" />
+          </svg>
+        );
+      case 'airport':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <path d="M4 12 L20 12" stroke="currentColor" strokeWidth="2" />
+            <path d="M16 8 L20 12 L16 16" stroke="currentColor" strokeWidth="1.5" fill="none" />
+            <circle cx="8" cy="12" r="2" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'plane':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <path d="M4 12 L20 12" stroke="currentColor" strokeWidth="2" />
+            <path d="M12 6 L12 18" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M8 10 L12 6 L16 10" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          </svg>
+        );
+      case 'tank':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="6" y="10" width="12" height="8" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
+            <line x1="15" y1="8" x2="18" y2="6" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'ship':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <path d="M6 12 L20 12 L18 18 L8 18 Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
+            <rect x="12" y="8" width="2" height="6" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="11" y="6" width="4" height="4" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'building':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="6" y="8" width="12" height="12" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="8" y="12" width="4" height="4" stroke="currentColor" strokeWidth="1" />
+            <rect x="14" y="12" width="4" height="4" stroke="currentColor" strokeWidth="1" />
+            <rect x="8" y="18" width="4" height="2" stroke="currentColor" strokeWidth="1" />
+          </svg>
+        );
+      case 'house':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="6" y="12" width="12" height="10" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M4 12 L12 6 L20 12" stroke="currentColor" strokeWidth="1.5" fill="none" />
+            <rect x="10" y="16" width="4" height="6" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'road':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <path d="M4 12 L20 12" stroke="currentColor" strokeWidth="3" />
+            <path d="M8 10 L8 14" stroke="currentColor" strokeWidth="1" />
+            <path d="M12 10 L12 14" stroke="currentColor" strokeWidth="1" />
+            <path d="M16 10 L16 14" stroke="currentColor" strokeWidth="1" />
+          </svg>
+        );
+      case 'radiation':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1" />
+            <circle cx="12" cy="12" r="2" fill="currentColor" />
+          </svg>
+        );
+      case 'geometry':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="6" y="6" width="12" height="12" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M6 6 L18 18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2,2" />
+            <path d="M18 6 L6 18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2,2" />
+          </svg>
+        );
+      case 'atmosphere':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <ellipse cx="12" cy="8" rx="10" ry="4" stroke="currentColor" strokeWidth="1.5" />
+            <ellipse cx="12" cy="16" rx="8" ry="3" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="8" y="12" width="8" height="4" stroke="currentColor" strokeWidth="1" />
+          </svg>
+        );
+      case 'ortho':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="4" y="6" width="16" height="12" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M4 12 L20 12" stroke="currentColor" strokeWidth="1" />
+            <path d="M12 6 L12 18" stroke="currentColor" strokeWidth="1" />
+          </svg>
+        );
+      case 'fusion':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="4" y="6" width="8" height="6" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="12" y="12" width="8" height="6" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M12 9 L12 12" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'color':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <circle cx="8" cy="10" r="3" fill="currentColor" opacity="0.5" />
+            <circle cx="16" cy="10" r="3" fill="currentColor" opacity="0.7" />
+            <circle cx="12" cy="16" r="3" fill="currentColor" opacity="0.9" />
+          </svg>
+        );
+      case 'mosaic':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="6" y="6" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="12" y="6" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="6" y="12" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="12" y="12" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
       default:
         return null;
     }
@@ -94,14 +257,13 @@ const Toolbox: React.FC = () => {
 
   return (
     <div className="absolute right-4 top-20 z-10">
-      {/* 展开/收起按钮 */}
       <div className="bg-blue-600 text-white px-4 py-2 rounded-t-lg flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
         <span className="font-medium">工具箱</span>
         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </div>
 
       {isExpanded && (
-        <div className="bg-white border border-gray-200 border-t-0 rounded-b-lg shadow-lg w-72 max-h-[500px] overflow-y-auto">
+        <div className="bg-white border border-gray-200 border-t-0 rounded-b-lg shadow-lg w-80 max-h-[550px] overflow-y-auto">
           {/* 空间分析 */}
           <div className="border-b border-gray-200">
             <div 
@@ -164,6 +326,66 @@ const Toolbox: React.FC = () => {
                     <span className="whitespace-nowrap">{tool.name}</span>
                   </button>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* 遥感算法 */}
+          <div className="border-b border-gray-200">
+            <div 
+              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
+              onClick={() => toggleSection('遥感算法')}
+            >
+              <div className="flex items-center gap-2">
+                <Satellite size={16} className="text-gray-700" />
+                <span className="text-sm font-medium text-gray-800">遥感算法</span>
+              </div>
+              {expandedSections.includes('遥感算法') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
+            </div>
+
+            {expandedSections.includes('遥感算法') && (
+              <div className="px-3 pb-3">
+                {/* 遥感识别 */}
+                <div className="mb-2">
+                  <div className="text-xs font-medium text-gray-500 px-2 py-1">遥感识别</div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {remoteSensingRecognitionTools.map((tool, idx) => (
+                      <button 
+                        key={idx} 
+                        className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors ${
+                          tool.disabled 
+                            ? 'text-gray-400 cursor-not-allowed' 
+                            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                        }`}
+                        disabled={tool.disabled}
+                      >
+                        {renderIcon(tool.icon, tool.disabled)}
+                        <span className="whitespace-nowrap truncate">{tool.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 遥感处理 */}
+                <div>
+                  <div className="text-xs font-medium text-gray-500 px-2 py-1">遥感处理</div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {remoteSensingProcessingTools.map((tool, idx) => (
+                      <button 
+                        key={idx} 
+                        className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors ${
+                          tool.disabled 
+                            ? 'text-gray-400 cursor-not-allowed' 
+                            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                        }`}
+                        disabled={tool.disabled}
+                      >
+                        {renderIcon(tool.icon, tool.disabled)}
+                        <span className="whitespace-nowrap truncate">{tool.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
