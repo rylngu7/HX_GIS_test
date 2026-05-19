@@ -13,39 +13,42 @@ import {
 const MapView: React.FC = () => {
   return (
     <div className="flex-1 bg-gray-100 relative overflow-hidden">
+      {/* 地图背景 */}
+      <div className="absolute inset-0 bg-[#f5f0e6]">
+        {/* 模拟地图底图 */}
+        <svg className="w-full h-full" viewBox="0 0 1000 800">
+          <defs>
+            <pattern id="mapNoise" width="20" height="20" patternUnits="userSpaceOnUse">
+              <rect width="20" height="20" fill="#f0ebe1"/>
+              <rect x="0" y="0" width="5" height="5" fill="#e6e0d5" opacity="0.4"/>
+            </pattern>
+          </defs>
+          <rect width="1000" height="800" fill="url(#mapNoise)"/>
+          
+          {/* 模拟道路 */}
+          <path d="M0,400 Q250,380 500,400 T1000,400" stroke="#e8dcc8" strokeWidth="6" fill="none"/>
+          <path d="M500,0 Q520,200 500,400 T500,800" stroke="#e8dcc8" strokeWidth="6" fill="none"/>
+          <path d="M0,200 Q200,190 400,200 T800,200" stroke="#e0d4be" strokeWidth="3" fill="none"/>
+          <path d="M200,0 Q210,100 200,200 T200,500" stroke="#e0d4be" strokeWidth="3" fill="none"/>
+          <path d="M700,200 Q750,300 800,500" stroke="#e0d4be" strokeWidth="3" fill="none"/>
+          
+          {/* 地形特征 */}
+          <path d="M100,600 Q150,580 200,620 Q180,680 150,660 Q120,640 100,600" fill="#e2d9c6" opacity="0.5"/>
+          <path d="M700,100 Q780,80 850,130 Q820,200 770,180 Q720,160 700,100" fill="#e2d9c6" opacity="0.5"/>
+        </svg>
+      </div>
+
+      {/* 遥感影像 */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="bg-black w-[700px] h-[500px] relative">
-          <div className="absolute inset-0 overflow-hidden">
-            <svg viewBox="0 0 700 500" className="w-full h-full">
-              <defs>
-                <pattern id="noise" width="10" height="10" patternUnits="userSpaceOnUse">
-                  <rect width="10" height="10" fill="#e8e4dc"/>
-                  <rect x="0" y="0" width="2" height="2" fill="#d8d4cc" opacity="0.5"/>
-                  <rect x="5" y="3" width="3" height="2" fill="#c8c4bc" opacity="0.3"/>
-                </pattern>
-              </defs>
-              <rect width="700" height="500" fill="url(#noise)"/>
-              
-              <path d="M50,250 Q200,230 350,250 T650,250" stroke="#e5e0d5" strokeWidth="4" fill="none"/>
-              <path d="M350,50 Q360,150 350,250 T350,450" stroke="#e5e0d5" strokeWidth="4" fill="none"/>
-              
-              <rect x="250" y="150" width="120" height="100" fill="#d0cbc3" opacity="0.7"/>
-              <rect x="260" y="160" width="30" height="25" fill="#c5c0b8"/>
-              <rect x="310" y="170" width="25" height="20" fill="#c5c0b8"/>
-              <rect x="280" y="200" width="40" height="30" fill="#c5c0b8"/>
-              
-              <rect x="480" y="300" width="80" height="60" fill="#d0cbc3" opacity="0.6"/>
-              <rect x="490" y="310" width="20" height="15" fill="#c5c0b8"/>
-              
-              <ellipse cx="150" cy="320" rx="40" ry="25" fill="#8b9aa3" opacity="0.6"/>
-              <ellipse cx="145" cy="315" rx="25" ry="15" fill="#7a8992" opacity="0.5"/>
-              
-              <path d="M400,100 Q500,80 600,120 Q550,180 500,150 Q450,130 400,100" fill="#d8d3cb" opacity="0.6"/>
-              <path d="M100,400 Q200,380 280,420 Q230,470 180,450 Q130,430 100,400" fill="#d8d3cb" opacity="0.5"/>
-              
-              <rect x="20" y="20" width="660" height="460" fill="none" stroke="#666" strokeWidth="1" strokeDasharray="4,4" transform="rotate(2, 350, 250)"/>
-            </svg>
-          </div>
+        <div className="relative">
+          <img 
+            src="https://images.unsplash.com/photo-1549880338-65ddcdfd017b?auto=format&fit=crop&w=800&q=80" 
+            alt="遥感影像" 
+            className="w-[700px] h-[500px] object-cover transform"
+            style={{ transform: 'rotate(-2deg)' }}
+          />
+          {/* 虚线边框 */}
+          <div className="absolute inset-0 border-2 border-dashed border-gray-500 rounded-sm" style={{ transform: 'rotate(-2deg)' }}></div>
         </div>
       </div>
 

@@ -7,18 +7,21 @@ import {
   Filter, 
   ChevronDown, 
   ChevronRight, 
+  ChevronUp,
   Folder, 
   FileImage, 
   FileText, 
   Plus, 
   MoreVertical,
   Layers,
-  FileOutput
+  FileOutput,
+  Database as DatabaseIcon
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState('原始库');
   const [expandedFolders, setExpandedFolders] = useState<string[]>(['水文气象']);
+  const [metadataExpanded, setMetadataExpanded] = useState(true);
 
   const toggleFolder = (folderName: string) => {
     setExpandedFolders(prev => 
@@ -64,6 +67,30 @@ const Sidebar: React.FC = () => {
 
   return (
     <div className="w-72 bg-white border-r border-gray-200 h-full flex flex-col overflow-hidden">
+      {/* 元数据管理 */}
+      <div className="border-b border-gray-200">
+        <div 
+          className="flex items-center justify-between px-4 py-3 cursor-pointer bg-blue-50"
+          onClick={() => setMetadataExpanded(!metadataExpanded)}
+        >
+          <div className="flex items-center gap-2">
+            <DatabaseIcon size={18} className="text-blue-600" />
+            <span className="font-medium text-blue-700">元数据管理</span>
+          </div>
+          {metadataExpanded ? <ChevronUp size={16} className="text-blue-600" /> : <ChevronDown size={16} className="text-blue-600" />}
+        </div>
+        
+        {metadataExpanded && (
+          <div className="px-2 pb-2">
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-100 border-l-4 border-blue-600 rounded-r cursor-pointer">
+              <FileText size={16} className="text-blue-700" />
+              <span className="text-sm font-medium text-blue-800">数据目录</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 数据目录内容 */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 font-semibold text-gray-800">
