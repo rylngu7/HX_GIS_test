@@ -147,22 +147,22 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
         <div className="space-y-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">✓</div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-800">辐射校正</div>
-              <div className="text-xs text-gray-500 mt-1">消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。</div>
-              <div className="mt-3 flex items-center gap-3">
+              <div className="text-xs text-gray-500 mt-1 break-words">消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。</div>
+              <div className="mt-3 flex items-center gap-3 w-full">
                 <input
                   type="checkbox"
                   checked={preprocessAutoCorrect}
                   onChange={(e) => setPreprocessAutoCorrect(e.target.checked)}
-                  className="w-4 h-4 text-blue-600"
+                  className="w-4 h-4 text-blue-600 flex-shrink-0"
                 />
-                <label className="text-sm text-gray-700 whitespace-nowrap">大气校正</label>
+                <label className="text-sm text-gray-700 whitespace-nowrap flex-shrink-0">大气校正</label>
                 <input
                   type="text"
                   value={preprocessCorrectionValue}
                   onChange={(e) => setPreprocessCorrectionValue(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
