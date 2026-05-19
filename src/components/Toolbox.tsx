@@ -1,10 +1,11 @@
-
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite } from 'lucide-react';
+import RemoteSensingModal from './RemoteSensingModal';
 
 const Toolbox: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedSections, setExpandedSections] = useState<string[]>(['空间分析', '几何分析', '遥感算法', '地图输出']);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -55,6 +56,12 @@ const Toolbox: React.FC = () => {
   const mapOutputTools = [
     { name: '截图', icon: 'screenshot', disabled: false },
   ];
+
+  const handleToolClick = (toolName: string, disabled: boolean) => {
+    if (!disabled) {
+      setActiveModal(toolName);
+    }
+  };
 
   const renderIcon = (iconType: string, disabled: boolean) => {
     const opacityClass = disabled ? 'opacity-40' : '';
@@ -205,8 +212,8 @@ const Toolbox: React.FC = () => {
         return (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
             <rect x="6" y="6" width="12" height="12" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M6 6 L18 18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2,2" />
-            <path d="M18 6 L6 18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2,2" />
+            <path d="M6 6 L18 18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
+            <path d="M18 6 L6 18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
           </svg>
         );
       case 'atmosphere':
@@ -256,175 +263,162 @@ const Toolbox: React.FC = () => {
   };
 
   return (
-    <div className="absolute right-4 top-20 z-10">
-      <div className="bg-blue-600 text-white px-4 py-2 rounded-t-lg flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
-        <span className="font-medium">工具箱</span>
-        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+    <>
+      <div className="absolute right-4 top-20 z-10">
+        <div className="bg-blue-600 text-white px-4 py-2 rounded-t-lg flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+          <span className="font-medium">工具箱</span>
+          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+
+        {isExpanded && (
+          <div className="bg-white border border-gray-200 border-t-0 rounded-b-lg shadow-lg w-80 max-h-[550px] overflow-y-auto">
+            <div className="border-b border-gray-200">
+              <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50" onClick={() => toggleSection('空间分析')}>
+                <div className="flex items-center gap-2">
+                  <Box size={16} className="text-gray-700" />
+                  <span className="text-sm font-medium text-gray-800">空间分析</span>
+                </div>
+                {expandedSections.includes('空间分析') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
+              </div>
+              
+              {expandedSections.includes('空间分析') && (
+                <div className="px-3 pb-3 grid grid-cols-2 gap-1 bg-gray-50">
+                  {spatialAnalysisTools.map((tool, idx) => (
+                    <button 
+                      key={idx} 
+                      className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors ${
+                        tool.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                      }`}
+                      disabled={tool.disabled}
+                      onClick={() => handleToolClick(tool.name, tool.disabled)}
+                    >
+                      {renderIcon(tool.icon, tool.disabled)}
+                      <span className="whitespace-nowrap truncate">{tool.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-b border-gray-200">
+              <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50" onClick={() => toggleSection('几何分析')}>
+                <div className="flex items-center gap-2">
+                  <Layers size={16} className="text-gray-700" />
+                  <span className="text-sm font-medium text-gray-800">几何分析</span>
+                </div>
+                {expandedSections.includes('几何分析') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
+              </div>
+
+              {expandedSections.includes('几何分析') && (
+                <div className="px-3 pb-3">
+                  {geometryAnalysisTools.map((tool, idx) => (
+                    <button 
+                      key={idx} 
+                      className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors w-full ${
+                        tool.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                      }`}
+                      disabled={tool.disabled}
+                      onClick={() => handleToolClick(tool.name, tool.disabled)}
+                    >
+                      {renderIcon(tool.icon, tool.disabled)}
+                      <span className="whitespace-nowrap">{tool.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-b border-gray-200">
+              <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50" onClick={() => toggleSection('遥感算法')}>
+                <div className="flex items-center gap-2">
+                  <Satellite size={16} className="text-gray-700" />
+                  <span className="text-sm font-medium text-gray-800">遥感算法</span>
+                </div>
+                {expandedSections.includes('遥感算法') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
+              </div>
+
+              {expandedSections.includes('遥感算法') && (
+                <div className="px-3 pb-3">
+                  <div className="mb-2">
+                    <div className="text-xs font-medium text-gray-500 px-2 py-1">遥感识别</div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {remoteSensingRecognitionTools.map((tool, idx) => (
+                        <button 
+                          key={idx} 
+                          className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors ${
+                            tool.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                          }`}
+                          disabled={tool.disabled}
+                          onClick={() => handleToolClick(tool.name, tool.disabled)}
+                        >
+                          {renderIcon(tool.icon, tool.disabled)}
+                          <span className="whitespace-nowrap truncate">{tool.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 px-2 py-1">遥感处理</div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {remoteSensingProcessingTools.map((tool, idx) => (
+                        <button 
+                          key={idx} 
+                          className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors ${
+                            tool.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                          }`}
+                          disabled={tool.disabled}
+                          onClick={() => handleToolClick(tool.name, tool.disabled)}
+                        >
+                          {renderIcon(tool.icon, tool.disabled)}
+                          <span className="whitespace-nowrap truncate">{tool.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50" onClick={() => toggleSection('地图输出')}>
+                <div className="flex items-center gap-2">
+                  <MapIcon size={16} className="text-gray-700" />
+                  <span className="text-sm font-medium text-gray-800">地图输出</span>
+                </div>
+                {expandedSections.includes('地图输出') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
+              </div>
+
+              {expandedSections.includes('地图输出') && (
+                <div className="px-3 pb-3">
+                  {mapOutputTools.map((tool, idx) => (
+                    <button 
+                      key={idx} 
+                      className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors w-full ${
+                        tool.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
+                      }`}
+                      disabled={tool.disabled}
+                      onClick={() => handleToolClick(tool.name, tool.disabled)}
+                    >
+                      {renderIcon(tool.icon, tool.disabled)}
+                      <span className="whitespace-nowrap">{tool.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {isExpanded && (
-        <div className="bg-white border border-gray-200 border-t-0 rounded-b-lg shadow-lg w-80 max-h-[550px] overflow-y-auto">
-          {/* 空间分析 */}
-          <div className="border-b border-gray-200">
-            <div 
-              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
-              onClick={() => toggleSection('空间分析')}
-            >
-              <div className="flex items-center gap-2">
-                <Box size={16} className="text-gray-700" />
-                <span className="text-sm font-medium text-gray-800">空间分析</span>
-              </div>
-              {expandedSections.includes('空间分析') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
-            </div>
-            
-            {expandedSections.includes('空间分析') && (
-              <div className="px-3 pb-3 grid grid-cols-2 gap-1 bg-gray-50">
-                {spatialAnalysisTools.map((tool, idx) => (
-                  <button 
-                    key={idx} 
-                    className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors ${
-                      tool.disabled 
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                    }`}
-                    disabled={tool.disabled}
-                  >
-                    {renderIcon(tool.icon, tool.disabled)}
-                    <span className="whitespace-nowrap truncate">{tool.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 几何分析 */}
-          <div className="border-b border-gray-200">
-            <div 
-              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
-              onClick={() => toggleSection('几何分析')}
-            >
-              <div className="flex items-center gap-2">
-                <Layers size={16} className="text-gray-700" />
-                <span className="text-sm font-medium text-gray-800">几何分析</span>
-              </div>
-              {expandedSections.includes('几何分析') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
-            </div>
-
-            {expandedSections.includes('几何分析') && (
-              <div className="px-3 pb-3">
-                {geometryAnalysisTools.map((tool, idx) => (
-                  <button 
-                    key={idx} 
-                    className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors w-full ${
-                      tool.disabled 
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                    }`}
-                    disabled={tool.disabled}
-                  >
-                    {renderIcon(tool.icon, tool.disabled)}
-                    <span className="whitespace-nowrap">{tool.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 遥感算法 */}
-          <div className="border-b border-gray-200">
-            <div 
-              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
-              onClick={() => toggleSection('遥感算法')}
-            >
-              <div className="flex items-center gap-2">
-                <Satellite size={16} className="text-gray-700" />
-                <span className="text-sm font-medium text-gray-800">遥感算法</span>
-              </div>
-              {expandedSections.includes('遥感算法') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
-            </div>
-
-            {expandedSections.includes('遥感算法') && (
-              <div className="px-3 pb-3">
-                {/* 遥感识别 */}
-                <div className="mb-2">
-                  <div className="text-xs font-medium text-gray-500 px-2 py-1">遥感识别</div>
-                  <div className="grid grid-cols-2 gap-1">
-                    {remoteSensingRecognitionTools.map((tool, idx) => (
-                      <button 
-                        key={idx} 
-                        className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors ${
-                          tool.disabled 
-                            ? 'text-gray-400 cursor-not-allowed' 
-                            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                        }`}
-                        disabled={tool.disabled}
-                      >
-                        {renderIcon(tool.icon, tool.disabled)}
-                        <span className="whitespace-nowrap truncate">{tool.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 遥感处理 */}
-                <div>
-                  <div className="text-xs font-medium text-gray-500 px-2 py-1">遥感处理</div>
-                  <div className="grid grid-cols-2 gap-1">
-                    {remoteSensingProcessingTools.map((tool, idx) => (
-                      <button 
-                        key={idx} 
-                        className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors ${
-                          tool.disabled 
-                            ? 'text-gray-400 cursor-not-allowed' 
-                            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                        }`}
-                        disabled={tool.disabled}
-                      >
-                        {renderIcon(tool.icon, tool.disabled)}
-                        <span className="whitespace-nowrap truncate">{tool.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 地图输出 */}
-          <div>
-            <div 
-              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
-              onClick={() => toggleSection('地图输出')}
-            >
-              <div className="flex items-center gap-2">
-                <MapIcon size={16} className="text-gray-700" />
-                <span className="text-sm font-medium text-gray-800">地图输出</span>
-              </div>
-              {expandedSections.includes('地图输出') ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
-            </div>
-
-            {expandedSections.includes('地图输出') && (
-              <div className="px-3 pb-3">
-                {mapOutputTools.map((tool, idx) => (
-                  <button 
-                    key={idx} 
-                    className={`text-left text-xs px-2 py-2 rounded flex items-center gap-2 transition-colors w-full ${
-                      tool.disabled 
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                    }`}
-                    disabled={tool.disabled}
-                  >
-                    {renderIcon(tool.icon, tool.disabled)}
-                    <span className="whitespace-nowrap">{tool.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+      {activeModal && (
+        <RemoteSensingModal
+          isOpen={!!activeModal}
+          onClose={() => setActiveModal(null)}
+          toolName={activeModal}
+        />
       )}
-    </div>
+    </>
   );
 };
 
