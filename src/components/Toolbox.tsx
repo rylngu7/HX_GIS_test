@@ -265,6 +265,17 @@ const Toolbox: React.FC = () => {
   return (
     <>
       <div className="absolute right-4 top-20 z-10">
+        {/* 弹窗放在工具箱左侧 */}
+        {activeModal && (
+          <div className="absolute right-88 top-0">
+            <RemoteSensingModal
+              isOpen={!!activeModal}
+              onClose={() => setActiveModal(null)}
+              toolName={activeModal}
+            />
+          </div>
+        )}
+        
         <div className="bg-blue-600 text-white px-4 py-2 rounded-t-lg flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
           <span className="font-medium">工具箱</span>
           {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -410,14 +421,6 @@ const Toolbox: React.FC = () => {
           </div>
         )}
       </div>
-
-      {activeModal && (
-        <RemoteSensingModal
-          isOpen={!!activeModal}
-          onClose={() => setActiveModal(null)}
-          toolName={activeModal}
-        />
-      )}
     </>
   );
 };
