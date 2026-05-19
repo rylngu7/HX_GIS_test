@@ -2,7 +2,11 @@
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite } from 'lucide-react';
 
-const Toolbox: React.FC = () => {
+interface ToolboxProps {
+  onOpenModal: (title: string) => void;
+}
+
+const Toolbox: React.FC<ToolboxProps> = ({ onOpenModal }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedSections, setExpandedSections] = useState<string[]>(['空间分析', '几何分析', '遥感算法', '地图输出']);
 
@@ -358,6 +362,7 @@ const Toolbox: React.FC = () => {
                             : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
                         }`}
                         disabled={tool.disabled}
+                        onClick={() => !tool.disabled && onOpenModal(tool.name)}
                       >
                         {renderIcon(tool.icon, tool.disabled)}
                         <span className="whitespace-nowrap truncate">{tool.name}</span>
@@ -379,6 +384,7 @@ const Toolbox: React.FC = () => {
                             : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
                         }`}
                         disabled={tool.disabled}
+                        onClick={() => !tool.disabled && onOpenModal(tool.name)}
                       >
                         {renderIcon(tool.icon, tool.disabled)}
                         <span className="whitespace-nowrap truncate">{tool.name}</span>
