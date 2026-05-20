@@ -59,7 +59,7 @@ const MapView: React.FC<MapViewProps> = ({ selectedLayerName }) => {
 
       {/* 左上角 - 图层缩放按钮组 */}
       {selectedLayerName && (
-        <div className="absolute left-[320px] top-4 flex gap-1 bg-white rounded-lg shadow-lg p-1" style={{ zIndex: 20 }}>
+        <div className="absolute left-4 top-4 flex gap-1 bg-white rounded-lg shadow-lg p-1" style={{ zIndex: 50 }}>
           <span className="px-3 py-2 text-sm text-gray-700 flex items-center">
             {selectedLayerName}
           </span>
@@ -80,7 +80,7 @@ const MapView: React.FC<MapViewProps> = ({ selectedLayerName }) => {
       )}
 
       {/* 右侧工具栏 */}
-      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-1" style={{ zIndex: 10 }}>
+      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-1" style={{ zIndex: 45 }}>
         <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50 relative">
           <Box size={18} className="text-gray-700" />
           <span className="absolute -top-7 left-1/2 transform -translate-x-1/2 text-xs text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200 shadow whitespace-nowrap">3D</span>
@@ -111,7 +111,7 @@ const MapView: React.FC<MapViewProps> = ({ selectedLayerName }) => {
       </div>
 
       {/* 右上角控件 */}
-      <div className="absolute top-4 right-4 flex gap-2" style={{ zIndex: 10 }}>
+      <div className="absolute top-4 right-4 flex gap-2" style={{ zIndex: 45 }}>
         <button className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-700 hover:bg-gray-50">
           工具
         </button>
@@ -124,7 +124,7 @@ const MapView: React.FC<MapViewProps> = ({ selectedLayerName }) => {
       </div>
 
       {/* 底部状态栏 */}
-      <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center gap-4 pb-2" style={{ zIndex: 10 }}>
+      <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center gap-4 pb-2" style={{ zIndex: 45 }}>
         <div className="bg-white/95 backdrop-blur px-4 py-2 rounded shadow text-sm text-gray-700 font-mono">
           X: 8945358.677 &nbsp;&nbsp; Y: 4589023.544
         </div>
