@@ -14,7 +14,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   onClose,
   toolName
 }) => {
-  // 所有状态移到组件顶层
   const [resultName, setResultName] = useState(() => `${toolName}-${generateRandomId()}`);
   const [selectedLayer, setSelectedLayer] = useState('');
   const [selectedAlgorithm, setSelectedAlgorithm] = useState(toolName);
@@ -36,15 +35,12 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   const [resolution, setResolution] = useState('2');
   const [overlapMethod, setOverlapMethod] = useState('第一个值');
   const [resampleMethod, setResampleMethod] = useState('nearest');
-  // 预处理流程相关状态
   const [preprocessAutoCorrect, setPreprocessAutoCorrect] = useState(false);
   const [preprocessCorrectionValue, setPreprocessCorrectionValue] = useState('0.15');
-  // 影像镶嵌相关状态
   const [mosaicLayers, setMosaicLayers] = useState<string[]>([]);
   const [isMosaicDropdownOpen, setIsMosaicDropdownOpen] = useState(false);
   const availableMosaicLayers = ['影像1.tif', '影像2.tif', '影像3.tif'];
 
-  // 当 toolName 变化时更新 resultName
   useMemo(() => {
     setResultName(`${toolName}-${generateRandomId()}`);
   }, [toolName]);
@@ -56,7 +52,14 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     onClose();
   };
 
-  // 渲染遥感识别类界面
+  const toggleMosaicLayer = (layer: string) => {
+    setMosaicLayers(prev => 
+      prev.includes(layer) 
+        ? prev.filter(l => l !== layer) 
+        : [...prev, layer]
+    );
+  };
+
   const renderRecognitionInterface = () => (
     <div className="p-4 space-y-4">
       <div>
@@ -109,7 +112,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 渲染预处理流程界面
   const renderPreprocessInterface = () => (
     <div className="p-4 space-y-4">
       <div>
@@ -204,7 +206,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 辐射定标/几何校正界面
   const renderStandardProcessingInterface = (description: string) => (
     <div className="p-4 space-y-4">
       <div>
@@ -246,7 +247,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 大气校正界面
   const renderAtmosphereCorrectionInterface = () => (
     <div className="p-4 space-y-4">
       <div>
@@ -308,7 +308,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 影像融合界面
   const renderFusionInterface = () => (
     <div className="p-4 space-y-4">
       <div>
@@ -365,7 +364,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 正射校正界面
   const renderOrthoCorrectionInterface = () => (
     <div className="p-4 space-y-4">
       <div>
@@ -439,7 +437,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 影像匀色界面
   const renderColorCorrectionInterface = () => (
     <div className="p-4 space-y-4">
       <div>
@@ -582,17 +579,7 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 影像镶嵌界面
-  const renderMosaicInterface = () => {
-    const toggleMosaicLayer = (layer: string) => {
-      setMosaicLayers(prev => 
-        prev.includes(layer) 
-          ? prev.filter(l => l !== layer) 
-          : [...prev, layer]
-      );
-    };
-
-    return (
+  const renderMosaicInterface = () => (
     <div className="p-4 space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -647,7 +634,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
           )}
         </div>
         
-        {/* 已选择的图层列表 */}
         {mosaicLayers.length > 0 && (
           <div className="mt-2 space-y-1">
             {mosaicLayers.map(layer => (
@@ -721,7 +707,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 简单界面
   const renderSimpleInterface = () => (
     <div className="p-4 space-y-4">
       <div>
@@ -758,7 +743,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  // 决定渲染哪个界面
   const renderContent = () => {
     const recognitionTools = [
       '车辆目标识别', '路口目标识别', '桥梁目标识别', '机场目标识别',
@@ -798,7 +782,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   return (
     <div className="w-80">
       <div className="bg-white rounded-lg shadow-xl border border-gray-200">
-        {/* 头部 */}
         <div className="bg-white px-4 py-3 rounded-t-lg flex items-center justify-between border-b border-gray-200">
           <button
             onClick={onClose}
@@ -812,10 +795,8 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
           <div className="w-8"></div>
         </div>
 
-        {/* 内容区 */}
         {renderContent()}
 
-        {/* 底部 */}
         <div className="px-4 py-3 bg-blue-600 rounded-b-lg flex justify-center">
           <button
             onClick={handleExecute}
