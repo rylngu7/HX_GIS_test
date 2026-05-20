@@ -609,7 +609,7 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             onClick={() => setIsMosaicDropdownOpen(!isMosaicDropdownOpen)}
             className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
           >
-            <span>已选择 {mosaicLayers.length} 项</span>
+            <span>{mosaicLayers.length > 0 ? `已选择 ${mosaicLayers.length} 项` : ''}</span>
             <ChevronRight 
               size={16} 
               className={`transition-transform ${isMosaicDropdownOpen ? 'rotate-90' : ''}`}
