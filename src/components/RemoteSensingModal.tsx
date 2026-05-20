@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Info, Plus, Trash2, ChevronRight } from 'lucide-react';
+import { X, Info, Plus, Trash2, ChevronDown } from 'lucide-react';
 
 interface RemoteSensingModalProps {
   isOpen: boolean;
@@ -610,9 +610,8 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
           >
             <span>{mosaicLayers.length > 0 ? `已选择 ${mosaicLayers.length} 项` : ''}</span>
-            <ChevronRight 
+            <ChevronDown 
               size={16} 
-              className={`transition-transform ${isMosaicDropdownOpen ? 'rotate-90' : ''}`}
             />
           </button>
           
@@ -787,7 +786,7 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             onClick={onClose}
             className="text-gray-600 hover:bg-gray-100 rounded p-1 transition-colors"
           >
-            <ChevronRight size={16} className="rotate-180" />
+            <ChevronDown size={16} />
           </button>
           <h3 className="text-gray-800 font-medium">
             {toolName}

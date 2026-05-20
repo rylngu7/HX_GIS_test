@@ -166,7 +166,7 @@ const Sidebar: React.FC = () => {
                 className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-sm"
                 onClick={() => toggleFolder(folder.name)}
               >
-                {expandedFolders.includes(folder.name) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                <ChevronDown size={14} />
                 <Folder size={16} className="text-yellow-500" />
                 <span>{folder.name}</span>
               </div>
