@@ -258,11 +258,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
                     <span>影像数据</span>
                   </button>
                   <button 
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => {
-                      onExportClick('3d');
-                      setShowExportDropdown(false);
-                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 cursor-not-allowed"
+                    disabled
                   >
                     <Box size={14} />
                     <span>三维数据</span>

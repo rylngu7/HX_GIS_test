@@ -40,12 +40,18 @@ type TargetLibrary = 'original' | 'standard' | 'fusion';
 const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) => {
   const [exportType, setExportType] = useState<ExportType>('condition');
   const [conditionTab, setConditionTab] = useState<ConditionTab>('attribute');
-  const [targetLibrary, setTargetLibrary] = useState<TargetLibrary>('original');
+  const [targetLibrary, setTargetLibrary] = useState<TargetLibrary>('standard');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [dataName, setDataName] = useState('');
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  
+  // 影像数据特定状态
+  const [outputArea, setOutputArea] = useState<'draw' | 'full'>('draw');
+  const [outputType, setOutputType] = useState<'original' | 'thumbnail'>('original');
+  const [outputFormat, setOutputFormat] = useState('tif');
+  const [asyncExecute, setAsyncExecute] = useState(false);
   
   // 绘图设置状态
   const [lineType, setLineType] = useState('实线');
@@ -324,6 +330,118 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
     </div>
   );
 
+  // 影像数据条件导出渲染
+  const renderImageConditionExport = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">图层</label>
+        <select className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">b61234_3857</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">输出区域</label>
+        <div className="flex gap-2 items-center">
+          <div className="flex gap-1 border border-gray-300 rounded p-1">
+            <button className="p-2 rounded border border-blue-500 text-blue-500 hover:bg-blue-50">
+              <Edit size={18} />
+            </button>
+            <button className="p-2 rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+              <Square size={18} />
+            </button>
+          </div>
+          <div className="flex gap-1 border border-gray-300 rounded p-1">
+            <button className="p-2 rounded border border-blue-500 text-blue-500 hover:bg-blue-50">
+              <CheckSquare size={18} />
+            </button>
+            <button className="p-2 rounded border border-gray-300 text-gray-500 hover:bg-gray-50">
+              <MousePointerClick size={18} />
+            </button>
+          </div>
+          <button className="p-2 rounded border border-red-200 text-red-500 hover:bg-red-50">
+            <Trash2 size={18} />
+          </button>
+        </div>
+        <div className="mt-2 space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer"
+              style={{ borderColor: outputArea === 'draw' ? '#2563eb' : '#d1d5db', backgroundColor: outputArea === 'draw' ? '#2563eb' : 'transparent' }}
+              onClick={() => setOutputArea('draw')}
+            >
+              {outputArea === 'draw' && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+            <span className={outputArea === 'draw' ? 'text-blue-600 font-medium' : 'text-gray-700'}>绘制范围</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer"
+              style={{ borderColor: outputArea === 'full' ? '#2563eb' : '#d1d5db', backgroundColor: outputArea === 'full' ? '#2563eb' : 'transparent' }}
+              onClick={() => setOutputArea('full')}
+            >
+              {outputArea === 'full' && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+            <span className={outputArea === 'full' ? 'text-blue-600 font-medium' : 'text-gray-700'}>地图全图</span>
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">输出类型</label>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer"
+              style={{ borderColor: outputType === 'original' ? '#2563eb' : '#d1d5db', backgroundColor: outputType === 'original' ? '#2563eb' : 'transparent' }}
+              onClick={() => setOutputType('original')}
+            >
+              {outputType === 'original' && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+            <span className={outputType === 'original' ? 'text-blue-600 font-medium' : 'text-gray-700'}>原始影像</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer"
+              style={{ borderColor: outputType === 'thumbnail' ? '#2563eb' : '#d1d5db', backgroundColor: outputType === 'thumbnail' ? '#2563eb' : 'transparent' }}
+              onClick={() => setOutputType('thumbnail')}
+            >
+              {outputType === 'thumbnail' && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+            <span className={outputType === 'thumbnail' ? 'text-blue-600 font-medium' : 'text-gray-700'}>缩略图</span>
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">输出格式</label>
+        <select 
+          value={outputFormat}
+          onChange={(e) => setOutputFormat(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="tif">tif</option>
+          <option value="png">png</option>
+          <option value="jpg">jpg</option>
+        </select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-gray-700">异步执行</label>
+        <button 
+          className={`w-12 h-6 rounded-full transition-colors ${asyncExecute ? 'bg-blue-600' : 'bg-gray-300'}`}
+          onClick={() => setAsyncExecute(!asyncExecute)}
+        >
+          <div 
+            className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${asyncExecute ? 'translate-x-6' : 'translate-x-0.5'}`}
+            style={{ marginTop: '2px' }}
+          />
+        </button>
+        <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded">如异步执行请到任务结果中查看</span>
+      </div>
+    </div>
+  );
+
   // 全量导出渲染
   const renderFullExport = () => (
     <div className="space-y-4">
@@ -351,9 +469,28 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">目标库 <span className="text-red-500">*</span></label>
-        <select className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="">请选择目标库</option>
-        </select>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTargetLibrary('standard')}
+            className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+              targetLibrary === 'standard' 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            标准库
+          </button>
+          <button
+            onClick={() => setTargetLibrary('fusion')}
+            className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+              targetLibrary === 'fusion' 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            融合库
+          </button>
+        </div>
       </div>
 
       <div>
@@ -447,45 +584,58 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {exportType === 'condition' ? (
-            <div className="space-y-4">
-              {/* 查询条件 */}
-              <div className="bg-gray-100 px-4 py-2 rounded-t flex items-center justify-between">
-                <span className="font-medium text-gray-700">查询条件</span>
-                <ChevronDown size={16} className="text-gray-500" />
+          {dataType === 'vector' && (
+            exportType === 'condition' ? (
+              <div className="space-y-4">
+                {/* 查询条件 */}
+                <div className="bg-gray-100 px-4 py-2 rounded-t flex items-center justify-between">
+                  <span className="font-medium text-gray-700">查询条件</span>
+                  <ChevronDown size={16} className="text-gray-500" />
+                </div>
+
+                {/* 属性/空间标签页 */}
+                <div className="flex border-b border-gray-200">
+                  <button
+                    onClick={() => setConditionTab('attribute')}
+                    className={`px-4 py-2 text-sm font-medium ${
+                      conditionTab === 'attribute' 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    属性条件
+                  </button>
+                  <button
+                    onClick={() => setConditionTab('spatial')}
+                    className={`px-4 py-2 text-sm font-medium ${
+                      conditionTab === 'spatial' 
+                        ? 'text-blue-600 border-b-2 border-blue-600' 
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    空间条件
+                  </button>
+                </div>
+
+                {conditionTab === 'attribute' ? renderAttributeCondition() : renderSpatialCondition()}
+
+                {/* 查询结果 */}
+                <div className="mt-4">{renderQueryResults()}</div>
               </div>
+            ) : (
+              renderFullExport()
+            )
+          )}
 
-              {/* 属性/空间标签页 */}
-              <div className="flex border-b border-gray-200">
-                <button
-                  onClick={() => setConditionTab('attribute')}
-                  className={`px-4 py-2 text-sm font-medium ${
-                    conditionTab === 'attribute' 
-                      ? 'text-blue-600 border-b-2 border-blue-600' 
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  属性条件
-                </button>
-                <button
-                  onClick={() => setConditionTab('spatial')}
-                  className={`px-4 py-2 text-sm font-medium ${
-                    conditionTab === 'spatial' 
-                      ? 'text-blue-600 border-b-2 border-blue-600' 
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  空间条件
-                </button>
-              </div>
+          {dataType === 'image' && (
+            exportType === 'condition' ? renderImageConditionExport() : renderFullExport()
+          )}
 
-              {conditionTab === 'attribute' ? renderAttributeCondition() : renderSpatialCondition()}
-
-              {/* 查询结果 */}
-              <div className="mt-4">{renderQueryResults()}</div>
+          {dataType === '3d' && (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+              <Box size={48} className="mb-3 opacity-50" />
+              <div className="text-sm">三维数据导出功能暂未开放</div>
             </div>
-          ) : (
-            renderFullExport()
           )}
         </div>
 
@@ -499,30 +649,45 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
           </button>
           
           {/* 导出按钮带下拉菜单 */}
-          <div className="relative">
-            <div className="flex">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
-                导出到本地
-              </button>
-              <button 
-                className="px-2 py-2 bg-blue-600 text-white border-l border-blue-500 rounded-r hover:bg-blue-700 flex items-center"
-                onClick={() => setShowExportDropdown(!showExportDropdown)}
-              >
-                <ChevronDown size={16} />
-              </button>
-            </div>
-            
-            {showExportDropdown && (
-              <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
-                <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  <span>导出到本地</span>
-                </button>
-                <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  <span>导出到数据目录</span>
+          {dataType !== '3d' && (
+            <div className="relative">
+              <div className="flex">
+                {dataType === 'image' && exportType === 'condition' ? (
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
+                    下载
+                  </button>
+                ) : (
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
+                    导出到本地
+                  </button>
+                )}
+                <button 
+                  className="px-2 py-2 bg-blue-600 text-white border-l border-blue-500 rounded-r hover:bg-blue-700 flex items-center"
+                  onClick={() => setShowExportDropdown(!showExportDropdown)}
+                >
+                  <ChevronDown size={16} />
                 </button>
               </div>
-            )}
-          </div>
+              
+              {showExportDropdown && (
+                <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
+                  <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <span>导出到本地</span>
+                  </button>
+                  <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <span>导出到数据目录</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* 重置按钮 - 仅影像条件导出需要 */}
+          {dataType === 'image' && exportType === 'condition' && (
+            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              重置
+            </button>
+          )}
         </div>
       </div>
 
@@ -564,3 +729,4 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
 };
 
 export default ExportModal;
+
