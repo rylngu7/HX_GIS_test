@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite } from 'lucide-react';
 import RemoteSensingModal from './RemoteSensingModal';
 
-const Toolbox: React.FC = () => {
+interface ToolboxProps {
+  onExecute?: (toolName: string) => void;
+}
+
+const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedSections, setExpandedSections] = useState<string[]>(['空间分析', '几何分析', '遥感算法', '地图输出']);
   const [activeModal, setActiveModal] = useState<string | null>(null);

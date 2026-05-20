@@ -14,14 +14,19 @@ import {
   MoreVertical,
   Layers,
   FileOutput,
-  Database as DatabaseIcon,
   FileText
 } from 'lucide-react';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onExportClick: () => void;
+  onLayerSelect?: (layerName: string) => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
   const [activeTab, setActiveTab] = useState('原始库');
   const [expandedFolders, setExpandedFolders] = useState<string[]>(['水文气象']);
   const [metadataExpanded, setMetadataExpanded] = useState(true);
+  const [selectedLayer, setSelectedLayer] = useState('基准图.tif');
 
   const toggleFolder = (folderName: string) => {
     setExpandedFolders(prev => 
@@ -29,6 +34,13 @@ const Sidebar: React.FC = () => {
         ? prev.filter(f => f !== folderName) 
         : [...prev, folderName]
     );
+  };
+
+  const handleLayerClick = (layerName: string) => {
+    setSelectedLayer(layerName);
+    if (onLayerSelect) {
+      onLayerSelect(layerName);
+    }
   };
 
   const dataFolders = [
@@ -66,6 +78,14 @@ const Sidebar: React.FC = () => {
       name: '测试香烟1',
       children: []
     },
+  ];
+
+  const layerList = [
+    '波段合成',
+    '基准图.tif',
+    '矫正图.tif',
+    '预处理流程-TT8Y9713428358001',
+    '13428358001'
   ];
 
   const getTagColor = (tag: string) => {
@@ -201,14 +221,32 @@ const Sidebar: React.FC = () => {
               <Layers size={18} />
               <span>图层管理</span>
             </div>
-            <button className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm">
+            <button 
+              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm"
+              onClick={onExportClick}
+            >
               <FileOutput size={14} />
               <span>导出</span>
             </button>
           </div>
-          <div className="bg-blue-100 border border-blue-200 rounded p-2 text-sm text-gray-700 flex items-center gap-2">
-            <FileImage size={16} className="text-blue-700" />
-            <span className="truncate">B61236_coordinate_3857</span>
+          
+          {/* 图层列表 */}
+          <div className="space-y-1">
+            {layerList.map((layer) => (
+              <div
+                key={layer}
+                onClick={() => handleLayerClick(layer)}
+                className={`flex items-center gap-2 px-3 py-2 rounded cursor-pointer text-sm transition-colors ${
+                  selectedLayer === layer 
+                    ? 'bg-blue-100 text-blue-800' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div className={`w-3.5 h-3.5 border ${selectedLayer === layer ? 'border-blue-500 bg-blue-500' : 'border-gray-400'} rounded`} />
+                <Layers size={16} className={selectedLayer === layer ? 'text-blue-700' : 'text-gray-500'} />
+                <span className="flex-1 truncate">{layer}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

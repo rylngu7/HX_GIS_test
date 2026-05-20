@@ -5,6 +5,7 @@ interface RemoteSensingModalProps {
   isOpen: boolean;
   onClose: () => void;
   toolName: string;
+  onExecute?: (toolName: string) => void;
 }
 
 const generateRandomId = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -12,7 +13,8 @@ const generateRandomId = () => Math.random().toString(36).substring(2, 8).toUppe
 const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   isOpen,
   onClose,
-  toolName
+  toolName,
+  onExecute
 }) => {
   const [resultName, setResultName] = useState(() => `${toolName}-${generateRandomId()}`);
   const [selectedLayer, setSelectedLayer] = useState('');
@@ -59,7 +61,9 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   if (!isOpen) return null;
 
   const handleExecute = () => {
-    console.log('执行:', { toolName, resultName, selectedLayer });
+    if (onExecute) {
+      onExecute(toolName);
+    }
     onClose();
   };
 
