@@ -8,6 +8,11 @@ export default defineConfig({
   build: {
     sourcemap: 'hidden',
   },
+  server: {
+    watch: {
+      ignored: ['**/.pnpm-store/**', '**/node_modules/**'],
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
