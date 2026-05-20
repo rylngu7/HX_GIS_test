@@ -31,6 +31,7 @@ const Toolbox: React.FC = () => {
   ];
 
   const remoteSensingRecognitionTools = [
+    { name: '多目标识别', icon: 'multiTarget', disabled: false },
     { name: '车辆目标识别', icon: 'car', disabled: false },
     { name: '路口目标识别', icon: 'intersection', disabled: false },
     { name: '桥梁目标识别', icon: 'bridge', disabled: false },
@@ -45,13 +46,11 @@ const Toolbox: React.FC = () => {
 
   const remoteSensingProcessingTools = [
     { name: '预处理流程', icon: 'process', disabled: false },
-    { name: '辐射定标', icon: 'radiation', disabled: false },
-    { name: '几何校正', icon: 'geometry', disabled: false },
     { name: '大气校正', icon: 'atmosphere', disabled: false },
     { name: '正射校正', icon: 'ortho', disabled: false },
-    { name: '影像融合', icon: 'fusion', disabled: false },
     { name: '影像匀色', icon: 'color', disabled: false },
     { name: '影像镶嵌', icon: 'mosaic', disabled: false },
+    { name: '波段合成', icon: 'bandComposite', disabled: false },
   ];
 
   const mapOutputTools = [
@@ -264,6 +263,26 @@ const Toolbox: React.FC = () => {
             <path d="M12 2L20 6L20 10L12 14L4 10L4 6L12 2Z" stroke="currentColor" strokeWidth="1.5" />
             <path d="M12 14L12 18" stroke="currentColor" strokeWidth="1.5" />
             <circle cx="12" cy="20" r="2" fill="currentColor" />
+          </svg>
+        );
+      case 'multiTarget':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="16" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="8" cy="16" r="3" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="16" cy="16" r="3" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'bandComposite':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+            <rect x="4" y="4" width="6" height="6" fill="currentColor" opacity="0.3" />
+            <rect x="7" y="7" width="6" height="6" fill="currentColor" opacity="0.5" />
+            <rect x="10" y="10" width="6" height="6" fill="currentColor" opacity="0.7" />
+            <rect x="4" y="4" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="7" y="7" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="10" y="10" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         );
       default:

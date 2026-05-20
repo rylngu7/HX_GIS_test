@@ -40,6 +40,17 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   const [mosaicLayers, setMosaicLayers] = useState<string[]>([]);
   const [isMosaicDropdownOpen, setIsMosaicDropdownOpen] = useState(false);
   const availableMosaicLayers = ['影像1.tif', '影像2.tif', '影像3.tif'];
+  const [isBandCompositeDropdownOpen, setIsBandCompositeDropdownOpen] = useState(false);
+  const [selectedCompositeLayer, setSelectedCompositeLayer] = useState('');
+  const [selectedBands, setSelectedBands] = useState<string[]>([]);
+  const [expandedLayers, setExpandedLayers] = useState<string[]>([]);
+  const availableLayers = ['波段合成', '基准图.tif', '矫正图.tif', '预处理流程-TT8Y9713428358001'];
+  const layerBands: { [key: string]: string[] } = {
+    '波段合成': [],
+    '基准图.tif': ['B1 [uint16]', 'B2 [uint16]', 'B3 [uint16]', 'B4 [uint16]'],
+    '矫正图.tif': [],
+    '预处理流程-TT8Y9713428358001': []
+  };
 
   useMemo(() => {
     setResultName(`${toolName}-${generateRandomId()}`);
@@ -96,6 +107,45 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
           <option value="影像3.tif">影像3.tif</option>
         </select>
       </div>
+    </div>
+  );
+
+  const renderMultiTargetRecognitionInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <span className="text-red-500">*</span> 图层数据
+          <Info size={14} className="text-gray-400" />
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="影像1.tif">影像1.tif</option>
+          <option value="影像2.tif">影像2.tif</option>
+          <option value="影像3.tif">影像3.tif</option>
+        </select>
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -106,7 +156,162 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
           onChange={(e) => setSelectedAlgorithm(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value={toolName}>{toolName}</option>
+          <option value="">请选择</option>
+          <option value="车辆目标识别">车辆目标识别</option>
+          <option value="路口目标识别">路口目标识别</option>
+          <option value="桥梁目标识别">桥梁目标识别</option>
+          <option value="机场目标识别">机场目标识别</option>
+          <option value="飞机目标识别">飞机目标识别</option>
+          <option value="油罐目标识别">油罐目标识别</option>
+          <option value="舰船目标识别">舰船目标识别</option>
+          <option value="建筑物提取">建筑物提取</option>
+          <option value="部落房屋提取">部落房屋提取</option>
+          <option value="道路提取">道路提取</option>
+        </select>
+      </div>
+    </div>
+  );
+
+  const toggleLayerExpand = (layer: string) => {
+    setExpandedLayers(prev => 
+      prev.includes(layer) 
+        ? prev.filter(l => l !== layer) 
+        : [...prev, layer]
+    );
+  };
+
+  const toggleBand = (band: string) => {
+    setSelectedBands(prev => 
+      prev.includes(band) 
+        ? prev.filter(b => b !== band) 
+        : [...prev, band]
+    );
+  };
+
+  const toggleAllBands = (layer: string) => {
+    const bands = layerBands[layer] || [];
+    if (selectedBands.length === bands.length) {
+      setSelectedBands([]);
+    } else {
+      setSelectedBands([...bands]);
+    }
+  };
+
+  const renderBandCompositeInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 图层数据
+        </label>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsBandCompositeDropdownOpen(!isBandCompositeDropdownOpen)}
+            className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
+          >
+            <span>{selectedCompositeLayer || ''}</span>
+            <ChevronDown size={16} />
+          </button>
+          
+          {isBandCompositeDropdownOpen && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200">
+                <input
+                  type="checkbox"
+                  checked={false}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">全部</span>
+                <ChevronDown size={14} className="ml-auto text-gray-500" />
+              </div>
+              {availableLayers.map(layer => (
+                <div key={layer}>
+                  <div 
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2 ${selectedCompositeLayer === layer ? 'bg-blue-50' : ''}`}
+                    onClick={() => {
+                      setSelectedCompositeLayer(layer);
+                      if (!expandedLayers.includes(layer)) {
+                        toggleLayerExpand(layer);
+                      }
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedCompositeLayer === layer}
+                      className="w-4 h-4"
+                      readOnly
+                    />
+                    <span className="text-sm flex-1">{layer}</span>
+                    {(layerBands[layer]?.length || 0) > 0 && (
+                      <ChevronDown
+                        size={14}
+                        className={`text-gray-500 transition-transform ${expandedLayers.includes(layer) ? 'rotate-180' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleLayerExpand(layer);
+                        }}
+                      />
+                    )}
+                  </div>
+                  {(layerBands[layer]?.length || 0) > 0 && expandedLayers.includes(layer) && (
+                    <div className="pl-10 pr-3 pb-2 space-y-1">
+                      {layerBands[layer].map(band => (
+                        <div 
+                          key={band}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleBand(band);
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedBands.includes(band)}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">{band}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <span className="text-red-500">*</span> 重采样方法
+        </label>
+        <select
+          value={resampleMethod}
+          onChange={(e) => setResampleMethod(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="nearest">nearest</option>
+          <option value="bilinear">bilinear</option>
+          <option value="cubic">cubic</option>
+          <option value="mode">mode</option>
         </select>
       </div>
     </div>
@@ -749,6 +954,10 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
       '建筑物提取', '部落房屋提取', '道路提取'
     ];
 
+    if (toolName === '多目标识别') {
+      return renderMultiTargetRecognitionInterface();
+    }
+
     if (recognitionTools.includes(toolName)) {
       return renderRecognitionInterface();
     }
@@ -756,20 +965,16 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     switch (toolName) {
       case '预处理流程':
         return renderPreprocessInterface();
-      case '辐射定标':
-        return renderStandardProcessingInterface('消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。');
-      case '几何校正':
-        return renderStandardProcessingInterface('消除或改正遥感影像几何误差，系统根据数据类型自动处理。');
       case '大气校正':
         return renderAtmosphereCorrectionInterface();
-      case '影像融合':
-        return renderFusionInterface();
       case '正射校正':
         return renderOrthoCorrectionInterface();
       case '影像匀色':
         return renderColorCorrectionInterface();
       case '影像镶嵌':
         return renderMosaicInterface();
+      case '波段合成':
+        return renderBandCompositeInterface();
       case '投影系统转换':
       case '截图':
         return renderSimpleInterface();
