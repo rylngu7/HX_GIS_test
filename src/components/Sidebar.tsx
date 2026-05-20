@@ -14,11 +14,14 @@ import {
   MoreVertical,
   Layers,
   FileOutput,
-  FileText
+  FileText,
+  Map,
+  Image,
+  Box
 } from 'lucide-react';
 
 interface SidebarProps {
-  onExportClick: () => void;
+  onExportClick: (dataType: 'vector' | 'image' | '3d') => void;
   onLayerSelect?: (layerName: string) => void;
 }
 
@@ -27,6 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
   const [expandedFolders, setExpandedFolders] = useState<string[]>(['水文气象']);
   const [metadataExpanded, setMetadataExpanded] = useState(true);
   const [selectedLayer, setSelectedLayer] = useState('基准图.tif');
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   const toggleFolder = (folderName: string) => {
     setExpandedFolders(prev => 
@@ -221,13 +225,51 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
               <Layers size={18} />
               <span>图层管理</span>
             </div>
-            <button 
-              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm"
-              onClick={onExportClick}
-            >
-              <FileOutput size={14} />
-              <span>导出</span>
-            </button>
+            <div className="relative">
+              <button 
+                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm"
+                onClick={() => setShowExportDropdown(!showExportDropdown)}
+              >
+                <FileOutput size={14} />
+                <span>导出</span>
+                <ChevronDown size={12} />
+              </button>
+              
+              {showExportDropdown && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[120px]">
+                  <button 
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => {
+                      onExportClick('vector');
+                      setShowExportDropdown(false);
+                    }}
+                  >
+                    <Map size={14} />
+                    <span>矢量数据</span>
+                  </button>
+                  <button 
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => {
+                      onExportClick('image');
+                      setShowExportDropdown(false);
+                    }}
+                  >
+                    <Image size={14} />
+                    <span>影像数据</span>
+                  </button>
+                  <button 
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => {
+                      onExportClick('3d');
+                      setShowExportDropdown(false);
+                    }}
+                  >
+                    <Box size={14} />
+                    <span>三维数据</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           
           {/* 图层列表 */}

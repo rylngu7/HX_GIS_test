@@ -12,10 +12,16 @@ export default function Home() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [currentTaskName, setCurrentTaskName] = useState('');
   const [selectedLayerName, setSelectedLayerName] = useState('基准图.tif');
+  const [exportDataType, setExportDataType] = useState<'vector' | 'image' | '3d'>('vector');
 
   const handleExecute = (toolName: string) => {
     setCurrentTaskName(toolName);
     setTaskModalOpen(true);
+  };
+
+  const handleExportClick = (dataType: 'vector' | 'image' | '3d') => {
+    setExportDataType(dataType);
+    setExportModalOpen(true);
   };
 
   return (
@@ -23,7 +29,7 @@ export default function Home() {
       <Header />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar 
-          onExportClick={() => setExportModalOpen(true)}
+          onExportClick={handleExportClick}
           onLayerSelect={setSelectedLayerName}
         />
         <div className="flex-1 relative">
@@ -43,6 +49,7 @@ export default function Home() {
       <ExportModal 
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
+        dataType={exportDataType}
       />
     </div>
   );
