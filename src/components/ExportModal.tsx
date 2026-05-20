@@ -5,6 +5,7 @@ import {
   Folder, 
   ChevronDown, 
   ChevronRight,
+  ChevronUp,
   Plus, 
   Check, 
   Map, 
@@ -36,6 +37,7 @@ interface ExportModalProps {
 type ExportType = 'condition' | 'full';
 type ConditionTab = 'attribute' | 'spatial';
 type TargetLibrary = 'original' | 'standard' | 'fusion';
+type ExportDestination = 'local' | 'directory' | null;
 
 const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) => {
   const [exportType, setExportType] = useState<ExportType>('condition');
@@ -46,6 +48,12 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [exportDestination, setExportDestination] = useState<ExportDestination>(null);
+  const [showDirectoryPanel, setShowDirectoryPanel] = useState(false);
+  
+  // 查询条件和查询结果折叠状态
+  const [showQueryConditions, setShowQueryConditions] = useState(true);
+  const [showQueryResults, setShowQueryResults] = useState(true);
   
   // 影像数据特定状态
   const [outputArea, setOutputArea] = useState<'draw' | 'full'>('draw');
@@ -94,6 +102,17 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
       case 'image': return <Image size={16} />;
       case '3d': return <Box size={16} />;
       default: return <Map size={16} />;
+    }
+  };
+
+  const handleExportOptionSelect = (destination: ExportDestination) => {
+    setExportDestination(destination);
+    setShowExportDropdown(false);
+    
+    if (destination === 'directory' && exportType === 'condition') {
+      setShowDirectoryPanel(true);
+    } else {
+      setShowDirectoryPanel(false);
     }
   };
 
@@ -276,57 +295,51 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
   // 查询结果渲染
   const renderQueryResults = () => (
     <div className="space-y-3">
-      <div className="bg-gray-100 px-3 py-2 rounded-t flex items-center justify-between">
+      <div className="bg-gray-100 px-3 py-2 rounded-t flex items-center justify-between cursor-pointer" onClick={() => setShowQueryResults(!showQueryResults)}>
         <span className="font-medium text-gray-700 text-sm">查询结果</span>
-        <ChevronDown size={16} className="text-gray-500" />
+        {showQueryResults ? <ChevronDown size={16} className="text-gray-500" /> : <ChevronRight size={16} className="text-gray-500" />}
       </div>
 
-      <div className="flex gap-2 items-center">
-        <select className="px-3 py-1.5 border border-gray-300 rounded text-sm flex-1">
-          <option>未选择</option>
-        </select>
-        <input type="text" placeholder="请输入关键词" className="px-3 py-1.5 border border-gray-300 rounded text-sm flex-1" />
-      </div>
+      {showQueryResults && (
+        <>
+          <div className="flex gap-2 items-center">
+            <select className="px-3 py-1.5 border border-gray-300 rounded text-sm flex-1">
+              <option>未选择</option>
+            </select>
+            <input type="text" placeholder="请输入关键词" className="px-3 py-1.5 border border-gray-300 rounded text-sm flex-1" />
+          </div>
 
-      <div className="flex border-b border-gray-200">
-        <button className="px-4 py-2 text-sm text-blue-600 border-b-2 border-blue-600 font-medium">
-          详情
-        </button>
-        <button className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
-          自定义统计
-        </button>
-        <div className="flex-1" />
-        <div className="flex gap-1">
-          <button className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50">
-            <Download size={14} />
-            导出
-            <ChevronDown size={12} />
-          </button>
-          <button className="px-3 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50">
-            投影转换
-          </button>
-        </div>
-      </div>
+          <div className="flex border-b border-gray-200">
+            <button className="px-4 py-2 text-sm text-blue-600 border-b-2 border-blue-600 font-medium">
+              详情
+            </button>
+            <button className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
+              自定义统计
+            </button>
+            <div className="flex-1" />
+          </div>
 
-      <div className="border border-gray-300 rounded p-2 min-h-[200px] flex items-center justify-center">
-        <div className="text-center text-gray-400">
-          <div className="text-sm">暂无数据</div>
-        </div>
-      </div>
+          <div className="border border-gray-300 rounded p-2 min-h-[200px] flex items-center justify-center">
+            <div className="text-center text-gray-400">
+              <div className="text-sm">暂无数据</div>
+            </div>
+          </div>
 
-      <div className="flex items-center justify-between text-sm text-gray-600">
-        <div className="flex items-center gap-2">
-          <button className="p-1 hover:bg-gray-100 rounded">&lt;</button>
-          <span className="text-blue-600 font-medium">1</span>
-          <button className="p-1 hover:bg-gray-100 rounded">&gt;</button>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>前往</span>
-          <input type="number" defaultValue={1} className="w-12 px-2 py-1 border border-gray-300 rounded text-sm text-center" />
-          <span>页</span>
-          <span>共 0 条</span>
-        </div>
-      </div>
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <button className="p-1 hover:bg-gray-100 rounded">&lt;</button>
+              <span className="text-blue-600 font-medium">1</span>
+              <button className="p-1 hover:bg-gray-100 rounded">&gt;</button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>前往</span>
+              <input type="number" defaultValue={1} className="w-12 px-2 py-1 border border-gray-300 rounded text-sm text-center" />
+              <span>页</span>
+              <span>共 0 条</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 
@@ -544,6 +557,57 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
     );
   };
 
+  // 数据目录保存面板
+  const renderDirectorySavePanel = () => (
+    <div className="border-t border-gray-200 px-6 py-4 space-y-4 bg-gray-50">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-medium text-gray-800">保存到数据目录</span>
+        <button onClick={() => setShowDirectoryPanel(false)} className="text-gray-500 hover:text-gray-700">
+          <X size={16} />
+        </button>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">数据名称 <span className="text-red-500">*</span></label>
+        <input 
+          type="text" 
+          placeholder="请输入数据名称"
+          value={dataName}
+          onChange={(e) => setDataName(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">目标库 <span className="text-red-500">*</span></label>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTargetLibrary('standard')}
+            className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+              targetLibrary === 'standard' 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            标准库
+          </button>
+          <button
+            onClick={() => setTargetLibrary('fusion')}
+            className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+              targetLibrary === 'fusion' 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            融合库
+          </button>
+        </div>
+      </div>
+
+      {renderDirectoryTree()}
+    </div>
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -587,39 +651,43 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
           {dataType === 'vector' && (
             exportType === 'condition' ? (
               <div className="space-y-4">
-                {/* 查询条件 */}
-                <div className="bg-gray-100 px-4 py-2 rounded-t flex items-center justify-between">
+                {/* 查询条件 - 可折叠 */}
+                <div className="bg-gray-100 px-4 py-2 rounded-t flex items-center justify-between cursor-pointer" onClick={() => setShowQueryConditions(!showQueryConditions)}>
                   <span className="font-medium text-gray-700">查询条件</span>
-                  <ChevronDown size={16} className="text-gray-500" />
+                  {showQueryConditions ? <ChevronDown size={16} className="text-gray-500" /> : <ChevronRight size={16} className="text-gray-500" />}
                 </div>
+                
+                {showQueryConditions && (
+                  <>
+                    {/* 属性/空间标签页 */}
+                    <div className="flex border-b border-gray-200">
+                      <button
+                        onClick={() => setConditionTab('attribute')}
+                        className={`px-4 py-2 text-sm font-medium ${
+                          conditionTab === 'attribute' 
+                            ? 'text-blue-600 border-b-2 border-blue-600' 
+                            : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                      >
+                        属性条件
+                      </button>
+                      <button
+                        onClick={() => setConditionTab('spatial')}
+                        className={`px-4 py-2 text-sm font-medium ${
+                          conditionTab === 'spatial' 
+                            ? 'text-blue-600 border-b-2 border-blue-600' 
+                            : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                      >
+                        空间条件
+                      </button>
+                    </div>
 
-                {/* 属性/空间标签页 */}
-                <div className="flex border-b border-gray-200">
-                  <button
-                    onClick={() => setConditionTab('attribute')}
-                    className={`px-4 py-2 text-sm font-medium ${
-                      conditionTab === 'attribute' 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    属性条件
-                  </button>
-                  <button
-                    onClick={() => setConditionTab('spatial')}
-                    className={`px-4 py-2 text-sm font-medium ${
-                      conditionTab === 'spatial' 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    空间条件
-                  </button>
-                </div>
+                    {conditionTab === 'attribute' ? renderAttributeCondition() : renderSpatialCondition()}
+                  </>
+                )}
 
-                {conditionTab === 'attribute' ? renderAttributeCondition() : renderSpatialCondition()}
-
-                {/* 查询结果 */}
+                {/* 查询结果 - 可折叠 */}
                 <div className="mt-4">{renderQueryResults()}</div>
               </div>
             ) : (
@@ -639,6 +707,9 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
           )}
         </div>
 
+        {/* 数据目录保存面板 - 仅在条件导出且选择导出到数据目录时显示 */}
+        {showDirectoryPanel && renderDirectorySavePanel()}
+
         {/* 底部按钮区 */}
         <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
           <button 
@@ -652,15 +723,9 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
           {dataType !== '3d' && (
             <div className="relative">
               <div className="flex">
-                {dataType === 'image' && exportType === 'condition' ? (
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
-                    下载
-                  </button>
-                ) : (
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
-                    导出到本地
-                  </button>
-                )}
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
+                  导出
+                </button>
                 <button 
                   className="px-2 py-2 bg-blue-600 text-white border-l border-blue-500 rounded-r hover:bg-blue-700 flex items-center"
                   onClick={() => setShowExportDropdown(!showExportDropdown)}
@@ -671,10 +736,19 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
               
               {showExportDropdown && (
                 <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
-                  <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <button 
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-gray-100 ${
+                      exportType === 'full' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700'
+                    }`}
+                    onClick={() => exportType !== 'full' && handleExportOptionSelect('local')}
+                    disabled={exportType === 'full'}
+                  >
                     <span>导出到本地</span>
                   </button>
-                  <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <button 
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => handleExportOptionSelect('directory')}
+                  >
                     <span>导出到数据目录</span>
                   </button>
                 </div>
@@ -729,4 +803,3 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
 };
 
 export default ExportModal;
-
