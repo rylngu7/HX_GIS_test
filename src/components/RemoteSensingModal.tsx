@@ -41,15 +41,15 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   const [isMosaicDropdownOpen, setIsMosaicDropdownOpen] = useState(false);
   const availableMosaicLayers = ['影像1.tif', '影像2.tif', '影像3.tif'];
   const [isBandCompositeDropdownOpen, setIsBandCompositeDropdownOpen] = useState(false);
-  const [selectedCompositeLayer, setSelectedCompositeLayer] = useState('');
-  const [selectedBands, setSelectedBands] = useState<string[]>([]);
+  const [selectedCompositeLayers, setSelectedCompositeLayers] = useState<string[]>([]);
+  const [selectedBandsByLayer, setSelectedBandsByLayer] = useState<{ [key: string]: string[] }>({});
   const [expandedLayers, setExpandedLayers] = useState<string[]>([]);
   const availableLayers = ['波段合成', '基准图.tif', '矫正图.tif', '预处理流程-TT8Y9713428358001'];
   const layerBands: { [key: string]: string[] } = {
-    '波段合成': [],
+    '波段合成': ['B1 [uint16]', 'B2 [uint16]', 'B3 [uint16]', 'B4 [uint16]'],
     '基准图.tif': ['B1 [uint16]', 'B2 [uint16]', 'B3 [uint16]', 'B4 [uint16]'],
-    '矫正图.tif': [],
-    '预处理流程-TT8Y9713428358001': []
+    '矫正图.tif': ['B1 [uint16]', 'B2 [uint16]', 'B3 [uint16]'],
+    '预处理流程-TT8Y9713428358001': ['B1 [uint16]', 'B2 [uint16]', 'B3 [uint16]', 'B4 [uint16]']
   };
 
   useMemo(() => {
@@ -180,21 +180,31 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     );
   };
 
-  const toggleBand = (band: string) => {
-    setSelectedBands(prev => 
-      prev.includes(band) 
-        ? prev.filter(b => b !== band) 
-        : [...prev, band]
+  const toggleCompositeLayer = (layer: string) => {
+    setSelectedCompositeLayers(prev => 
+      prev.includes(layer) 
+        ? prev.filter(l => l !== layer) 
+        : [...prev, layer]
     );
   };
 
-  const toggleAllBands = (layer: string) => {
-    const bands = layerBands[layer] || [];
-    if (selectedBands.length === bands.length) {
-      setSelectedBands([]);
-    } else {
-      setSelectedBands([...bands]);
-    }
+  const toggleBand = (layer: string, band: string) => {
+    setSelectedBandsByLayer(prev => {
+      const currentBands = prev[layer] || [];
+      const newBands = currentBands.includes(band) 
+        ? currentBands.filter(b => b !== band) 
+        : [...currentBands, band];
+      return { ...prev, [layer]: newBands };
+    });
+  };
+
+  const removeLayer = (layer: string) => {
+    setSelectedCompositeLayers(prev => prev.filter(l => l !== layer));
+    setSelectedBandsByLayer(prev => {
+      const newObj = { ...prev };
+      delete newObj[layer];
+      return newObj;
+    });
   };
 
   const renderBandCompositeInterface = () => (
@@ -227,7 +237,7 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             onClick={() => setIsBandCompositeDropdownOpen(!isBandCompositeDropdownOpen)}
             className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
           >
-            <span>{selectedCompositeLayer || ''}</span>
+            <span>{selectedCompositeLayers.length > 0 ? `已选择 ${selectedCompositeLayers.length} 项` : ''}</span>
             <ChevronDown size={16} />
           </button>
           
@@ -245,9 +255,9 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
               {availableLayers.map(layer => (
                 <div key={layer}>
                   <div 
-                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2 ${selectedCompositeLayer === layer ? 'bg-blue-50' : ''}`}
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2 ${selectedCompositeLayers.includes(layer) ? 'bg-blue-50' : ''}`}
                     onClick={() => {
-                      setSelectedCompositeLayer(layer);
+                      toggleCompositeLayer(layer);
                       if (!expandedLayers.includes(layer)) {
                         toggleLayerExpand(layer);
                       }
@@ -255,7 +265,7 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
                   >
                     <input
                       type="checkbox"
-                      checked={selectedCompositeLayer === layer}
+                      checked={selectedCompositeLayers.includes(layer)}
                       className="w-4 h-4"
                       readOnly
                     />
@@ -279,12 +289,12 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
                           className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleBand(band);
+                            toggleBand(layer, band);
                           }}
                         >
                           <input
                             type="checkbox"
-                            checked={selectedBands.includes(band)}
+                            checked={(selectedBandsByLayer[layer] || []).includes(band)}
                             className="w-4 h-4"
                           />
                           <span className="text-sm">{band}</span>
@@ -297,6 +307,35 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             </div>
           )}
         </div>
+        
+        {/* 显示选中的图层和波段 */}
+        {selectedCompositeLayers.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {selectedCompositeLayers.map(layer => (
+              <div key={layer} className="space-y-1">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded">
+                  <span className="text-sm">{layer}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeLayer(layer)}
+                    className="text-blue-500 hover:text-blue-700 ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {(selectedBandsByLayer[layer] || []).length > 0 && (
+                  <div className="pl-4 space-y-0.5">
+                    {(selectedBandsByLayer[layer] || []).map(band => (
+                      <div key={band} className="text-xs text-gray-600 px-2 py-0.5 bg-gray-100 rounded">
+                        {band}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
