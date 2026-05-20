@@ -304,6 +304,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
               isOpen={!!activeModal}
               onClose={() => setActiveModal(null)}
               toolName={activeModal}
+              onExecute={onExecute}
             />
           </div>
         )}
