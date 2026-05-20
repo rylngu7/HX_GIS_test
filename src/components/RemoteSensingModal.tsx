@@ -39,6 +39,10 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   // 预处理流程相关状态
   const [preprocessAutoCorrect, setPreprocessAutoCorrect] = useState(false);
   const [preprocessCorrectionValue, setPreprocessCorrectionValue] = useState('0.15');
+  // 影像镶嵌相关状态
+  const [mosaicLayers, setMosaicLayers] = useState<string[]>([]);
+  const [isMosaicDropdownOpen, setIsMosaicDropdownOpen] = useState(false);
+  const availableMosaicLayers = ['影像1.tif', '影像2.tif', '影像3.tif'];
 
   // 当 toolName 变化时更新 resultName
   useMemo(() => {
@@ -579,7 +583,16 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   );
 
   // 影像镶嵌界面
-  const renderMosaicInterface = () => (
+  const renderMosaicInterface = () => {
+    const toggleMosaicLayer = (layer: string) => {
+      setMosaicLayers(prev => 
+        prev.includes(layer) 
+          ? prev.filter(l => l !== layer) 
+          : [...prev, layer]
+      );
+    };
+
+    return (
     <div className="p-4 space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -603,17 +616,57 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
         <label className="block text-sm font-medium text-gray-700 mb-1">
           <span className="text-red-500">*</span> 图层数据
         </label>
-        <select
-          value={selectedLayer}
-          onChange={(e) => setSelectedLayer(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          multiple
-          size={4}
-        >
-          <option value="影像1.tif">影像1.tif</option>
-          <option value="影像2.tif">影像2.tif</option>
-          <option value="影像3.tif">影像3.tif</option>
-        </select>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsMosaicDropdownOpen(!isMosaicDropdownOpen)}
+            className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
+          >
+            <span>已选择 {mosaicLayers.length} 项</span>
+            <ChevronRight 
+              size={16} 
+              className={`transition-transform ${isMosaicDropdownOpen ? 'rotate-90' : ''}`}
+            />
+          </button>
+          
+          {isMosaicDropdownOpen && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+              {availableMosaicLayers.map(layer => (
+                <div 
+                  key={layer}
+                  className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${mosaicLayers.includes(layer) ? 'bg-blue-50' : ''}`}
+                  onClick={() => toggleMosaicLayer(layer)}
+                >
+                  <span>{layer}</span>
+                  {mosaicLayers.includes(layer) && (
+                    <span className="text-blue-600">✓</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* 已选择的图层列表 */}
+        {mosaicLayers.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {mosaicLayers.map(layer => (
+              <div 
+                key={layer}
+                className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded"
+              >
+                <span className="text-sm">{layer}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleMosaicLayer(layer)}
+                  className="text-blue-500 hover:text-blue-700 ml-2"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
