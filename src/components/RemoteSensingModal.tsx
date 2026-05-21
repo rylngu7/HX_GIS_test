@@ -64,6 +64,7 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     if (onExecute) {
       onExecute(toolName);
     }
+    console.log('执行:', { toolName, resultName, selectedLayer });
     onClose();
   };
 
@@ -75,46 +76,42 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     );
   };
 
+  const toggleLayerExpand = (layer: string) => {
+    setExpandedLayers(prev => 
+      prev.includes(layer) 
+        ? prev.filter(l => l !== layer) 
+        : [...prev, layer]
+    );
+  };
+
+  const toggleCompositeLayer = (layer: string) => {
+    setSelectedCompositeLayers(prev => 
+      prev.includes(layer) 
+        ? prev.filter(l => l !== layer) 
+        : [...prev, layer]
+    );
+  };
+
+  const toggleBand = (layer: string, band: string) => {
+    setSelectedBandsByLayer(prev => {
+      const currentBands = prev[layer] || [];
+      const newBands = currentBands.includes(band) 
+        ? currentBands.filter(b => b !== band) 
+        : [...currentBands, band];
+      return { ...prev, [layer]: newBands };
+    });
+  };
+
+  const removeLayer = (layer: string) => {
+    setSelectedCompositeLayers(prev => prev.filter(l => l !== layer));
+    setSelectedBandsByLayer(prev => {
+      const newObj = { ...prev };
+      delete newObj[layer];
+      return newObj;
+    });
+  };
+
   const renderRecognitionInterface = () => (
-    <div className="p-4 space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 结果名称
-        </label>
-        <div className="relative">
-          <input
-            type="text"
-            value={resultName}
-            onChange={(e) => setResultName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            maxLength={20}
-          />
-          <span className="absolute right-3 top-2 text-xs text-gray-400">
-            {resultName.length}/20
-          </span>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-          <span className="text-red-500">*</span> 图层数据
-          <Info size={14} className="text-gray-400" />
-        </label>
-        <select
-          value={selectedLayer}
-          onChange={(e) => setSelectedLayer(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">请选择</option>
-          <option value="影像1.tif">影像1.tif</option>
-          <option value="影像2.tif">影像2.tif</option>
-          <option value="影像3.tif">影像3.tif</option>
-        </select>
-      </div>
-    </div>
-  );
-
-  const renderMultiTargetRecognitionInterface = () => (
     <div className="p-4 space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -176,40 +173,44 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  const toggleLayerExpand = (layer: string) => {
-    setExpandedLayers(prev => 
-      prev.includes(layer) 
-        ? prev.filter(l => l !== layer) 
-        : [...prev, layer]
-    );
-  };
+  const renderMultiTargetRecognitionInterface = () => (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 结果名称
+        </label>
+        <div className="relative">
+          <input
+            type="text"
+            value={resultName}
+            onChange={(e) => setResultName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            maxLength={20}
+          />
+          <span className="absolute right-3 top-2 text-xs text-gray-400">
+            {resultName.length}/20
+          </span>
+        </div>
+      </div>
 
-  const toggleCompositeLayer = (layer: string) => {
-    setSelectedCompositeLayers(prev => 
-      prev.includes(layer) 
-        ? prev.filter(l => l !== layer) 
-        : [...prev, layer]
-    );
-  };
-
-  const toggleBand = (layer: string, band: string) => {
-    setSelectedBandsByLayer(prev => {
-      const currentBands = prev[layer] || [];
-      const newBands = currentBands.includes(band) 
-        ? currentBands.filter(b => b !== band) 
-        : [...currentBands, band];
-      return { ...prev, [layer]: newBands };
-    });
-  };
-
-  const removeLayer = (layer: string) => {
-    setSelectedCompositeLayers(prev => prev.filter(l => l !== layer));
-    setSelectedBandsByLayer(prev => {
-      const newObj = { ...prev };
-      delete newObj[layer];
-      return newObj;
-    });
-  };
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+          <span className="text-red-500">*</span> 图层数据
+          <Info size={14} className="text-gray-400" />
+        </label>
+        <select
+          value={selectedLayer}
+          onChange={(e) => setSelectedLayer(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="影像1.tif">影像1.tif</option>
+          <option value="影像2.tif">影像2.tif</option>
+          <option value="影像3.tif">影像3.tif</option>
+        </select>
+      </div>
+    </div>
+  );
 
   const renderBandCompositeInterface = () => (
     <div className="p-4 space-y-4">
@@ -1008,8 +1009,14 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     switch (toolName) {
       case '预处理流程':
         return renderPreprocessInterface();
+      case '辐射定标':
+        return renderStandardProcessingInterface('消除或改正因辐射误差而引起影像畸变，系统根据数据类型自动处理。');
+      case '几何校正':
+        return renderStandardProcessingInterface('消除或改正遥感影像几何误差，系统根据数据类型自动处理。');
       case '大气校正':
         return renderAtmosphereCorrectionInterface();
+      case '影像融合':
+        return renderFusionInterface();
       case '正射校正':
         return renderOrthoCorrectionInterface();
       case '影像匀色':
