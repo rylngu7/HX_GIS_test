@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Database, 
@@ -6,10 +5,8 @@ import {
   Search, 
   Filter, 
   ChevronDown, 
-  ChevronRight, 
   ChevronUp,
   Folder, 
-  FileImage, 
   Plus, 
   MoreVertical,
   Layers,
@@ -20,19 +17,15 @@ import {
   Box
 } from 'lucide-react';
 
-interface SidebarProps {
-  onExportClick: (dataType: 'vector' | 'image' | '3d') => void;
-  onLayerSelect?: (layerName: string) => void;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
+export default function Sidebar(props) {
+  const { onExportClick, onLayerSelect, onUploadClick } = props;
   const [activeTab, setActiveTab] = useState('原始库');
-  const [expandedFolders, setExpandedFolders] = useState<string[]>(['水文气象']);
+  const [expandedFolders, setExpandedFolders] = useState(['水文气象']);
   const [metadataExpanded, setMetadataExpanded] = useState(true);
   const [selectedLayer, setSelectedLayer] = useState('基准图.tif');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
-  const toggleFolder = (folderName: string) => {
+  const toggleFolder = (folderName) => {
     setExpandedFolders(prev => 
       prev.includes(folderName) 
         ? prev.filter(f => f !== folderName) 
@@ -40,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
     );
   };
 
-  const handleLayerClick = (layerName: string) => {
+  const handleLayerClick = (layerName) => {
     setSelectedLayer(layerName);
     if (onLayerSelect) {
       onLayerSelect(layerName);
@@ -92,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
     '13428358001'
   ];
 
-  const getTagColor = (tag: string) => {
+  const getTagColor = (tag) => {
     switch (tag) {
       case 'image': return 'bg-green-100 text-green-700';
       case '3d': return 'bg-orange-100 text-orange-700';
@@ -103,7 +96,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
 
   return (
     <div className="flex h-full">
-      {/* 第一部分：元数据管理 */}
       <div className="w-48 bg-white border-r border-gray-200 flex flex-col">
         <div 
           className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
@@ -125,22 +117,22 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
         )}
       </div>
 
-      {/* 第二部分：数据目录内容 */}
       <div className="flex-1 bg-white flex flex-col overflow-hidden">
-        {/* 数据目录头部 */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 font-semibold text-gray-800">
               <Database size={18} />
               <span>数据目录</span>
             </div>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
+            <button 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1"
+              onClick={onUploadClick}
+            >
               <Upload size={14} />
               <span>上传文件</span>
             </button>
           </div>
 
-          {/* 标签页 */}
           <div className="flex gap-2 mb-3">
             {['原始库', '标准库', '融合库'].map(tab => (
               <button
@@ -157,7 +149,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
             ))}
           </div>
 
-          {/* 搜索框 */}
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
             <input
@@ -167,7 +158,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
             />
           </div>
 
-          {/* 高级搜索按钮 */}
           <div className="flex gap-2">
             <button className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm">
               <span>高级搜索</span>
@@ -182,7 +172,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
           </div>
         </div>
 
-        {/* 数据目录内容 */}
         <div className="flex-1 overflow-y-auto p-2">
           {dataFolders.map(folder => (
             <div key={folder.name} className="mb-1">
@@ -218,7 +207,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
           ))}
         </div>
 
-        {/* 图层管理 */}
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 font-semibold text-gray-800">
@@ -269,7 +257,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
             </div>
           </div>
           
-          {/* 图层列表 */}
           <div className="space-y-1">
             {layerList.map((layer) => (
               <div
@@ -291,6 +278,4 @@ const Sidebar: React.FC<SidebarProps> = ({ onExportClick, onLayerSelect }) => {
       </div>
     </div>
   );
-};
-
-export default Sidebar;
+}
