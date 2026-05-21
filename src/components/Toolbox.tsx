@@ -50,9 +50,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
 
   const remoteSensingProcessingTools = [
     { name: '预处理流程', icon: 'process', disabled: false },
-    { name: '辐射定标', icon: 'radiation', disabled: false },
     { name: '几何校正', icon: 'geometry', disabled: false },
-    { name: '大气校正', icon: 'atmosphere', disabled: false },
     { name: '正射校正', icon: 'ortho', disabled: false },
     { name: '影像融合', icon: 'fusion', disabled: false },
     { name: '影像匀色', icon: 'color', disabled: false },
@@ -206,28 +204,12 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
             <path d="M16 10 L16 14" stroke="currentColor" strokeWidth="1" />
           </svg>
         );
-      case 'radiation':
-        return (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
-            <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1" />
-            <circle cx="12" cy="12" r="2" fill="currentColor" />
-          </svg>
-        );
       case 'geometry':
         return (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
             <rect x="6" y="6" width="12" height="12" stroke="currentColor" strokeWidth="1.5" />
             <path d="M6 6 L18 18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
             <path d="M18 6 L6 18" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2 2" />
-          </svg>
-        );
-      case 'atmosphere':
-        return (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
-            <ellipse cx="12" cy="8" rx="10" ry="4" stroke="currentColor" strokeWidth="1.5" />
-            <ellipse cx="12" cy="16" rx="8" ry="3" stroke="currentColor" strokeWidth="1.5" />
-            <rect x="8" y="12" width="8" height="4" stroke="currentColor" strokeWidth="1" />
           </svg>
         );
       case 'ortho':
