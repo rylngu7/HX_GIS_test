@@ -160,6 +160,20 @@ export default function UploadFileModal(props) {
             </div>
           </div>
 
+          {selectedDataType === 'original-image' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="text-sm text-blue-800">
+                <div className="font-medium mb-2">格式限制</div>
+                <p>仅支持 ZIP 格式</p>
+              </div>
+              <div className="text-sm text-blue-800 mt-3">
+                <div className="font-medium mb-2">数据限制</div>
+                <p>仅支持以下卫星数据：</p>
+                <p className="mt-1">LandSat 8/9、Sentinel 2、MODIS、GF 1/2/6、资源三号</p>
+              </div>
+            </div>
+          )}
+
           <div>
             <div
               onDragEnter={handleDragEnter}

@@ -13,14 +13,14 @@ export default function Home() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [currentTaskName, setCurrentTaskName] = useState('');
   const [selectedLayerName, setSelectedLayerName] = useState('基准图.tif');
-  const [exportDataType, setExportDataType] = useState<'vector' | 'image' | '3d'>('vector');
+  const [exportDataType, setExportDataType] = useState('vector');
 
-  const handleExecute = (toolName: string) => {
+  const handleExecute = (toolName) => {
     setCurrentTaskName(toolName);
     setTaskModalOpen(true);
   };
 
-  const handleExportClick = (dataType: 'vector' | 'image' | '3d') => {
+  const handleExportClick = (dataType) => {
     setExportDataType(dataType);
     setExportModalOpen(true);
   };
