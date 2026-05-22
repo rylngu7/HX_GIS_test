@@ -147,29 +147,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
           <option value="影像3.tif">影像3.tif</option>
         </select>
       </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 目标算法模型
-        </label>
-        <select
-          value={selectedAlgorithm}
-          onChange={(e) => setSelectedAlgorithm(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">请选择</option>
-          <option value="车辆目标识别">车辆目标识别</option>
-          <option value="路口目标识别">路口目标识别</option>
-          <option value="桥梁目标识别">桥梁目标识别</option>
-          <option value="机场目标识别">机场目标识别</option>
-          <option value="飞机目标识别">飞机目标识别</option>
-          <option value="油罐目标识别">油罐目标识别</option>
-          <option value="舰船目标识别">舰船目标识别</option>
-          <option value="建筑物提取">建筑物提取</option>
-          <option value="部落房屋提取">部落房屋提取</option>
-          <option value="道路提取">道路提取</option>
-        </select>
-      </div>
     </div>
   );
 
@@ -207,6 +184,29 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
           <option value="影像1.tif">影像1.tif</option>
           <option value="影像2.tif">影像2.tif</option>
           <option value="影像3.tif">影像3.tif</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          <span className="text-red-500">*</span> 目标算法模型
+        </label>
+        <select
+          value={selectedAlgorithm}
+          onChange={(e) => setSelectedAlgorithm(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">请选择</option>
+          <option value="车辆目标识别">车辆目标识别</option>
+          <option value="路口目标识别">路口目标识别</option>
+          <option value="桥梁目标识别">桥梁目标识别</option>
+          <option value="机场目标识别">机场目标识别</option>
+          <option value="飞机目标识别">飞机目标识别</option>
+          <option value="油罐目标识别">油罐目标识别</option>
+          <option value="舰船目标识别">舰船目标识别</option>
+          <option value="建筑物提取">建筑物提取</option>
+          <option value="部落房屋提取">部落房屋提取</option>
+          <option value="道路提取">道路提取</option>
         </select>
       </div>
     </div>
@@ -686,147 +686,205 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  const renderColorCorrectionInterface = () => (
-    <div className="p-4 space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 结果名称
-        </label>
-        <div className="relative">
-          <input
-            type="text"
-            value={resultName}
-            onChange={(e) => setResultName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            maxLength={20}
-          />
-          <span className="absolute right-3 top-2 text-xs text-gray-400">
-            {resultName.length}/20
-          </span>
+  const renderColorCorrectionInterface = () => {
+    const bands = ['B1', 'B2', 'B3', 'B4'];
+    
+    return (
+      <div className="p-4 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> 结果名称
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={resultName}
+              onChange={(e) => setResultName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              maxLength={20}
+            />
+            <span className="absolute right-3 top-2 text-xs text-gray-400">
+              {resultName.length}/20
+            </span>
+          </div>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 颜色空间类型
-        </label>
-        <select
-          value={colorSpace}
-          onChange={(e) => setColorSpace(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="RGB">RGB</option>
-          <option value="HSV">HSV</option>
-        </select>
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> 颜色空间类型
+          </label>
+          <select
+            value={colorSpace}
+            onChange={(e) => setColorSpace(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="RGB">RGB</option>
+            <option value="single">单波段</option>
+          </select>
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 基准数据
-        </label>
-        <select
-          value={baseData}
-          onChange={(e) => setBaseData(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">请选择</option>
-          <option value="基准1.tif">基准1.tif</option>
-        </select>
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> 基准数据
+          </label>
+          <select
+            value={baseData}
+            onChange={(e) => setBaseData(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">请选择</option>
+            <option value="基准图.tif">基准图.tif</option>
+          </select>
+        </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> R
-          </label>
-          <select
-            value={baseR}
-            onChange={(e) => setBaseR(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> G
-          </label>
-          <select
-            value={baseG}
-            onChange={(e) => setBaseG(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> B
-          </label>
-          <select
-            value={baseB}
-            onChange={(e) => setBaseB(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-          </select>
-        </div>
-      </div>
+        {colorSpace === 'RGB' ? (
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="text-red-500">*</span> R
+              </label>
+              <select
+                value={baseR}
+                onChange={(e) => setBaseR(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">请选择</option>
+                {bands.map(band => (
+                  <option key={band} value={band}>{band}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="text-red-500">*</span> G
+              </label>
+              <select
+                value={baseG}
+                onChange={(e) => setBaseG(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">请选择</option>
+                {bands.map(band => (
+                  <option key={band} value={band}>{band}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="text-red-500">*</span> B
+              </label>
+              <select
+                value={baseB}
+                onChange={(e) => setBaseB(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">请选择</option>
+                {bands.map(band => (
+                  <option key={band} value={band}>{band}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <span className="text-red-500">*</span> 波段
+            </label>
+            <select
+              value={baseR}
+              onChange={(e) => setBaseR(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">请选择</option>
+              {bands.map(band => (
+                <option key={band} value={band}>{band}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 匀色数据
-        </label>
-        <select
-          value={colorData}
-          onChange={(e) => setColorData(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">请选择</option>
-          <option value="待匀色1.tif">待匀色1.tif</option>
-        </select>
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> 匀色数据
+          </label>
+          <select
+            value={colorData}
+            onChange={(e) => setColorData(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">请选择</option>
+            <option value="矫正图.tif">矫正图.tif</option>
+          </select>
+        </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> R
-          </label>
-          <select
-            value={colorR}
-            onChange={(e) => setColorR(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> G
-          </label>
-          <select
-            value={colorG}
-            onChange={(e) => setColorG(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            <span className="text-red-500">*</span> B
-          </label>
-          <select
-            value={colorB}
-            onChange={(e) => setColorB(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">请选择</option>
-          </select>
-        </div>
+        {colorSpace === 'RGB' ? (
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="text-red-500">*</span> R
+              </label>
+              <select
+                value={colorR}
+                onChange={(e) => setColorR(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">请选择</option>
+                {bands.map(band => (
+                  <option key={band} value={band}>{band}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="text-red-500">*</span> G
+              </label>
+              <select
+                value={colorG}
+                onChange={(e) => setColorG(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">请选择</option>
+                {bands.map(band => (
+                  <option key={band} value={band}>{band}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="text-red-500">*</span> B
+              </label>
+              <select
+                value={colorB}
+                onChange={(e) => setColorB(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">请选择</option>
+                {bands.map(band => (
+                  <option key={band} value={band}>{band}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <span className="text-red-500">*</span> 波段
+            </label>
+            <select
+              value={colorR}
+              onChange={(e) => setColorR(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">请选择</option>
+              {bands.map(band => (
+                <option key={band} value={band}>{band}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderMosaicInterface = () => (
     <div className="p-4 space-y-4">
