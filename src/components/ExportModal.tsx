@@ -45,8 +45,10 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
   const [targetLibrary, setTargetLibrary] = useState<TargetLibrary>('standard');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [dataName, setDataName] = useState('');
-  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [showNewDirectoryModal, setShowNewDirectoryModal] = useState(false);
+  const [newDirectoryName, setNewDirectoryName] = useState('');
+  const [newDirectoryParent, setNewDirectoryParent] = useState('');
+  const [newDirectoryDescription, setNewDirectoryDescription] = useState('');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [exportDestination, setExportDestination] = useState<ExportDestination>(null);
   const [showDirectoryPanel, setShowDirectoryPanel] = useState(false);
@@ -80,10 +82,12 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
     setSelectedFolder(prev => prev === folder ? null : folder);
   };
 
-  const handleNewFolder = () => {
-    if (newFolderName.trim()) {
-      setNewFolderName('');
-      setShowNewFolderModal(false);
+  const handleNewDirectory = () => {
+    if (newDirectoryName.trim()) {
+      setNewDirectoryName('');
+      setNewDirectoryParent('');
+      setNewDirectoryDescription('');
+      setShowNewDirectoryModal(false);
     }
   };
 
@@ -458,8 +462,17 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
   // 全量导出渲染
   const renderFullExport = () => (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-gray-700">数据选择 <span className="text-red-500">*</span></label>
+        <button 
+          className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+          onClick={() => setShowNewDirectoryModal(true)}
+        >
+          <Plus size={14} />
+          新增目录
+        </button>
+      </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">数据选择 <span className="text-red-500">*</span></label>
         <div className="border border-gray-300 rounded p-2 min-h-[160px]">
           <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-100 rounded">
             <ChevronRight size={14} />
@@ -521,13 +534,13 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">选择文件夹</span>
+          <span className="text-sm font-medium text-gray-700">选择目录</span>
           <button 
             className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
-            onClick={() => setShowNewFolderModal(true)}
+            onClick={() => setShowNewDirectoryModal(true)}
           >
             <Plus size={14} />
-            新建文件夹
+            新建目录
           </button>
         </div>
         <div className="border border-gray-300 rounded p-3 min-h-[160px] max-h-[200px] overflow-y-auto">
@@ -765,31 +778,58 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
         </div>
       </div>
 
-      {showNewFolderModal && (
+      {showNewDirectoryModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-lg shadow-xl w-80 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-800">新建文件夹</h3>
-              <button onClick={() => setShowNewFolderModal(false)} className="text-gray-500 hover:text-gray-700">
+              <h3 className="text-lg font-medium text-gray-800">新增目录</h3>
+              <button onClick={() => setShowNewDirectoryModal(false)} className="text-gray-500 hover:text-gray-700">
                 <X size={18} />
               </button>
             </div>
-            <input 
-              type="text" 
-              placeholder="请输入文件夹名称"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-            />
-            <div className="flex justify-end gap-2">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">目录名称 <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  placeholder="请输入目录名称"
+                  value={newDirectoryName}
+                  onChange={(e) => setNewDirectoryName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">所属目录 <span className="text-red-500">*</span></label>
+                <select
+                  value={newDirectoryParent}
+                  onChange={(e) => setNewDirectoryParent(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">请选择</option>
+                  {libraryData[targetLibrary].folders.map((folder, idx) => (
+                    <option key={idx} value={folder}>{folder}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                <textarea
+                  placeholder="请输入描述"
+                  value={newDirectoryDescription}
+                  onChange={(e) => setNewDirectoryDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
               <button 
-                onClick={() => setShowNewFolderModal(false)}
+                onClick={() => setShowNewDirectoryModal(false)}
                 className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
               >
                 取消
               </button>
               <button 
-                onClick={handleNewFolder}
+                onClick={handleNewDirectory}
                 className="px-3 py-1.5 text-sm text-white bg-blue-600 rounded hover:bg-blue-700"
               >
                 确定
