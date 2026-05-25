@@ -1073,8 +1073,6 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
         return renderStandardProcessingInterface('消除或改正遥感影像几何误差，系统根据数据类型自动处理。');
       case '大气校正':
         return renderAtmosphereCorrectionInterface();
-      case '影像融合':
-        return renderFusionInterface();
       case '正射校正':
         return renderOrthoCorrectionInterface();
       case '影像匀色':

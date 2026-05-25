@@ -52,7 +52,6 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
     { name: '预处理流程', icon: 'process', disabled: false },
     { name: '几何校正', icon: 'geometry', disabled: false },
     { name: '正射校正', icon: 'ortho', disabled: false },
-    { name: '影像融合', icon: 'fusion', disabled: false },
     { name: '影像匀色', icon: 'color', disabled: false },
     { name: '影像镶嵌', icon: 'mosaic', disabled: false },
     { name: '波段合成', icon: 'bandComposite', disabled: false },
