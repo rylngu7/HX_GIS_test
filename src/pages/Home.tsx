@@ -3,21 +3,21 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import MapView from '../components/MapView';
 import Toolbox from '../components/Toolbox';
-import TaskProgressModal from '../components/TaskProgressModal';
+import TaskList, { useTaskManager, useTaskSimulation } from '../components/TaskList';
 import ExportModal from '../components/ExportModal';
 import UploadFileModal from '../components/UploadFileModal';
 
 export default function Home() {
-  const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [currentTaskName, setCurrentTaskName] = useState('');
   const [selectedLayerName, setSelectedLayerName] = useState('基准图.tif');
   const [exportDataType, setExportDataType] = useState<"vector" | "image" | "3d">('vector');
 
+  const { tasks, addTask, updateTaskProgress, closeTask, clearCompleted } = useTaskManager();
+  const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
+
   const handleExecute = (toolName) => {
-    setCurrentTaskName(toolName);
-    setTaskModalOpen(true);
+    startTask(toolName);
   };
 
   const handleExportClick = (dataType) => {
@@ -44,11 +44,11 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 任务进度弹窗 */}
-      <TaskProgressModal
-        isOpen={taskModalOpen}
-        onClose={() => setTaskModalOpen(false)}
-        taskName={currentTaskName}
+      {/* 任务列表 */}
+      <TaskList
+        tasks={tasks}
+        onCloseTask={closeTask}
+        onClearCompleted={clearCompleted}
       />
 
       {/* 导出弹窗 */}
