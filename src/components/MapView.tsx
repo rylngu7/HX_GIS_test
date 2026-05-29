@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Layers as LayersIcon, 
-  Info, 
-  Maximize, 
-  Plus, 
-  Minus, 
+import {
+  Box,
+  Layers as LayersIcon,
+  Info,
+  Maximize,
+  Plus,
+  Minus,
   Ruler,
   Download,
   Maximize2,
-  ZoomIn
+  ZoomIn,
+  Scan,
+  Search,
+  Layers
 } from 'lucide-react';
 
 interface MapViewProps {
@@ -20,126 +23,145 @@ const MapView: React.FC<MapViewProps> = ({ selectedLayerName }) => {
   const [zoomToLayer, setZoomToLayer] = useState(false);
 
   return (
-    <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: '#f5f0e6' }}>
-      {/* 底图 */}
+    <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: '#f0f0f0' }}>
+      {/* 底图 - 模拟中国地图样式 */}
       <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 1 }}>
-        <div 
-          className="relative"
+        <div
+          className="relative w-full h-full"
           style={{
-            width: '100%',
-            height: '100%',
-            backgroundImage: 'url(./basemap.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
+            background: `
+              linear-gradient(to bottom, #e8f4f8 0%, #d4e8f0 50%, #c8e0ed 100%)
+            `,
           }}
         >
-          {/* 模拟影像数据显示 */}
-          <div 
-            className="absolute"
-            style={{
-              left: '35%',
-              top: '25%',
-              width: '40%',
-              height: '50%',
-              backgroundColor: '#000',
-              transform: 'rotate(5deg)'
-            }}
-          >
-            <div 
-              className="absolute inset-2"
-              style={{
-                background: 'linear-gradient(135deg, #a8a08a 0%, #c9c2b0 50%, #8b8677 100%)',
-                clipPath: 'polygon(5% 0%, 95% 2%, 100% 98%, 0% 100%)'
-              }}
-            />
+          {/* 模拟地图内容 */}
+          <div className="absolute inset-0 opacity-30">
+            {/* 这里可以添加更详细的地图元素 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100" />
+
+            {/* 简化的中国轮廓 */}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600">
+              {/* 简化的中国边界 */}
+              <path
+                d="M200,100 Q250,80 300,90 L350,100 Q400,95 450,110 L500,120 Q550,140 560,180 L550,230 Q540,280 520,320 L480,350 Q450,380 420,400 L380,420 Q340,440 300,450 L250,460 Q200,470 160,460 L130,440 Q100,410 90,370 L80,320 Q75,270 85,220 L100,170 Q120,130 160,110 Z"
+                fill="#f5f5f0"
+                stroke="#d0d0cc"
+                strokeWidth="2"
+              />
+
+              {/* 主要省份边界线 */}
+              <path
+                d="M200,150 Q250,140 300,150 L350,160 Q400,155 450,170"
+                fill="none"
+                stroke="#d0d0cc"
+                strokeWidth="1"
+                strokeDasharray="4 2"
+              />
+              <path
+                d="M250,200 Q300,190 350,200 L400,210"
+                fill="none"
+                stroke="#d0d0cc"
+                strokeWidth="1"
+                strokeDasharray="4 2"
+              />
+              <path
+                d="M180,250 Q230,240 280,250 L330,260"
+                fill="none"
+                stroke="#d0d0cc"
+                strokeWidth="1"
+                strokeDasharray="4 2"
+              />
+
+              {/* 省会城市点 */}
+              {[
+                [350, 150],
+                [420, 170],
+                [300, 180],
+                [250, 200],
+                [380, 220],
+                [450, 240],
+                [280, 280],
+                [350, 300],
+                [400, 320],
+                [480, 350],
+                [180, 300],
+                [220, 350]
+              ].map(([x, y], idx) => (
+                <circle
+                  key={idx}
+                  cx={x}
+                  cy={y}
+                  r="4"
+                  fill="#888"
+                />
+              ))}
+            </svg>
           </div>
-        </div>
-      </div>
 
-      {/* 左上角 - 图层缩放按钮组 */}
-      {selectedLayerName && (
-        <div className="absolute left-4 top-4 flex gap-1 bg-white rounded-lg shadow-lg p-1" style={{ zIndex: 50 }}>
-          <span className="px-3 py-2 text-sm text-gray-700 flex items-center">
-            {selectedLayerName}
-          </span>
-          <button className="w-9 h-9 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded">
-            <Download size={18} />
-          </button>
-          <button className="w-9 h-9 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded">
-            <Info size={18} />
-          </button>
-          <button 
-            className="w-9 h-9 flex items-center justify-center bg-blue-600 text-white rounded hover:bg-blue-700"
-            onClick={() => setZoomToLayer(!zoomToLayer)}
-            title="缩放到图层"
-          >
-            <Maximize2 size={18} />
-          </button>
-        </div>
-      )}
-
-      {/* 右侧工具栏 */}
-      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-1" style={{ zIndex: 45 }}>
-        <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50 relative">
-          <Box size={18} className="text-gray-700" />
-          <span className="absolute -top-7 left-1/2 transform -translate-x-1/2 text-xs text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200 shadow whitespace-nowrap">3D</span>
-        </button>
-        <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
-          <LayersIcon size={18} className="text-gray-700" />
-        </button>
-        <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
-          <Info size={18} className="text-gray-700" />
-        </button>
-        <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
-          <LayersIcon size={18} className="text-gray-700" />
-        </button>
-        <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
-          <Ruler size={18} className="text-gray-700" />
-        </button>
-        <div className="w-px h-px bg-gray-300 mx-auto my-1" />
-        <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
-          <Plus size={18} className="text-gray-700" />
-        </button>
-        <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
-          <Minus size={18} className="text-gray-700" />
-        </button>
-        <div className="w-px h-px bg-gray-300 mx-auto my-1" />
-        <button className="w-9 h-9 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
-          <Maximize size={18} className="text-gray-700" />
-        </button>
-      </div>
-
-      {/* 右上角控件 */}
-      <div className="absolute top-4 right-4 flex gap-2" style={{ zIndex: 45 }}>
-        <button className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-700 hover:bg-gray-50">
-          工具
-        </button>
-        <button className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-700 hover:bg-gray-50">
-          图层
-        </button>
-        <button className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-700 hover:bg-gray-50">
-          分析
-        </button>
-      </div>
-
-      {/* 底部状态栏 */}
-      <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center gap-4 pb-2" style={{ zIndex: 45 }}>
-        <div className="bg-white/95 backdrop-blur px-4 py-2 rounded shadow text-sm text-gray-700 font-mono">
-          X: 8945358.677 &nbsp;&nbsp; Y: 4589023.544
-        </div>
-        <div className="bg-white/95 backdrop-blur px-4 py-2 rounded shadow text-sm text-gray-700 font-mono">
-          级别: 9
-        </div>
-        <div className="bg-white/95 backdrop-blur px-4 py-2 rounded shadow text-sm text-gray-700 font-mono">
-          EPSG:3857
-        </div>
-        <div className="bg-white/95 backdrop-blur px-4 py-2 rounded shadow text-sm text-gray-700 flex items-center gap-2">
-          <div className="w-16 h-3 border-l border-r border-b border-gray-600 relative">
-            <div className="absolute left-0 bottom-0 border-l-2 border-t-2 border-gray-600 w-1 h-1" />
-            <div className="absolute right-0 bottom-0 border-r-2 border-t-2 border-gray-600 w-1 h-1" />
+          {/* 右上角 - 控制面板 */}
+          <div className="absolute top-4 right-4 flex gap-2 z-50">
+            <div className="flex bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+              <button className="px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-r border-gray-200">
+                <Scan size={18} />
+                <span className="text-sm">飞行</span>
+              </button>
+              <button className="px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-r border-gray-200">
+                <Search size={18} />
+                <span className="text-sm">查询</span>
+              </button>
+              <button className="px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <Layers size={18} />
+                <span className="text-sm">对比</span>
+              </button>
+            </div>
           </div>
-          20 km
+
+          {/* 右侧 - 工具按钮 */}
+          <div className="absolute right-4 top-24 flex flex-col gap-1 z-50">
+            <button className="w-10 h-10 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
+              <Box size={18} className="text-gray-700" />
+            </button>
+            <button className="w-10 h-10 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
+              <LayersIcon size={18} className="text-gray-700" />
+            </button>
+            <button className="w-10 h-10 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
+              <Info size={18} className="text-gray-700" />
+            </button>
+            <div className="w-6 h-px bg-gray-300 mx-auto my-1" />
+            <button className="w-10 h-10 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
+              <Ruler size={18} className="text-gray-700" />
+            </button>
+            <div className="w-6 h-px bg-gray-300 mx-auto my-1" />
+            <button className="w-10 h-10 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
+              <Plus size={18} className="text-gray-700" />
+            </button>
+            <button className="w-10 h-10 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
+              <Minus size={18} className="text-gray-700" />
+            </button>
+            <div className="w-6 h-px bg-gray-300 mx-auto my-1" />
+            <button className="w-10 h-10 bg-white border border-gray-200 rounded shadow-sm flex items-center justify-center hover:bg-gray-50">
+              <Maximize size={18} className="text-gray-700" />
+            </button>
+          </div>
+
+          {/* 底部状态栏 */}
+          <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center gap-4 pb-2 z-50">
+            <div className="bg-white/95 backdrop-blur px-4 py-2 rounded shadow text-sm text-gray-700 font-mono flex items-center gap-2">
+              <span>X: 13511049.854</span>
+              <span>Y: 3629434.863</span>
+              <span>级别: 6</span>
+              <div className="w-24 h-3 border-l border-r border-b border-gray-600 relative">
+                <div className="absolute left-0 bottom-0 border-l-2 border-t-2 border-gray-600 w-1 h-1" />
+                <div className="absolute right-0 bottom-0 border-r-2 border-t-2 border-gray-600 w-1 h-1" />
+              </div>
+              <span>200 km</span>
+              <span>行政区划</span>
+              <div className="flex items-center gap-1 ml-4">
+                <div className="w-16 h-12 border border-gray-400 bg-gradient-to-br from-green-200 to-blue-200" />
+                <span className="text-xs">矢量</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

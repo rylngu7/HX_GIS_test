@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite } from 'lucide-react';
+import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite, ListTodo } from 'lucide-react';
 import RemoteSensingModal from './RemoteSensingModal';
+import VideoFusionModal from './VideoFusionModal';
+import TaskManagementCenter from './TaskManagementCenter';
 
 interface ToolboxProps {
   onExecute?: (toolName: string) => void;
@@ -10,6 +12,8 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedSections, setExpandedSections] = useState<string[]>(['空间分析', '几何分析', '遥感算法', '地图输出']);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [videoFusionOpen, setVideoFusionOpen] = useState(false);
+  const [taskManagementOpen, setTaskManagementOpen] = useState(false);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -59,11 +63,16 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
 
   const mapOutputTools = [
     { name: '截图', icon: 'screenshot', disabled: false, noModal: true },
+    { name: '视频融合', icon: 'videoFusion', disabled: false },
   ];
 
   const handleToolClick = (toolName: string, disabled: boolean, noModal?: boolean) => {
     if (!disabled && !noModal) {
-      setActiveModal(toolName);
+      if (toolName === '视频融合') {
+        setVideoFusionOpen(true);
+      } else {
+        setActiveModal(toolName);
+      }
     }
   };
 
@@ -263,13 +272,20 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
         );
       case 'bandComposite':
         return (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-500 ${opacityClass}`}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-600 ${opacityClass}`}>
             <rect x="4" y="4" width="6" height="6" fill="currentColor" opacity="0.3" />
             <rect x="7" y="7" width="6" height="6" fill="currentColor" opacity="0.5" />
             <rect x="10" y="10" width="6" height="6" fill="currentColor" opacity="0.7" />
             <rect x="4" y="4" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
             <rect x="7" y="7" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
             <rect x="10" y="10" width="6" height="6" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        );
+      case 'videoFusion':
+        return (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`text-gray-600 ${opacityClass}`}>
+            <rect x="4" y="6" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M10 9L16 12L10 15V9Z" fill="currentColor" />
           </svg>
         );
       default:
@@ -279,6 +295,19 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
 
   return (
     <>
+      {/* 视频融合弹窗 */}
+      <VideoFusionModal
+        isOpen={videoFusionOpen}
+        onClose={() => setVideoFusionOpen(false)}
+        onExecute={() => onExecute?.('视频融合')}
+      />
+
+      {/* 任务管理中心弹窗 */}
+      <TaskManagementCenter
+        isOpen={taskManagementOpen}
+        onClose={() => setTaskManagementOpen(false)}
+      />
+
       <div className="absolute right-4 top-20 z-[60]">
         {/* 弹窗放在工具箱左侧 */}
         {activeModal && (
@@ -291,6 +320,14 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
             />
           </div>
         )}
+
+        {/* 任务管理中心按钮 */}
+        <button
+          onClick={() => setTaskManagementOpen(true)}
+          className="absolute -left-12 top-0 w-10 h-10 bg-blue-600 text-white rounded-l-lg flex items-center justify-center hover:bg-blue-700 shadow-lg"
+        >
+          <ListTodo size={18} />
+        </button>
         
         <div className="bg-blue-600 text-white px-4 py-2 rounded-t-lg flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
           <span className="font-medium">工具箱</span>
