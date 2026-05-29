@@ -76,17 +76,20 @@ const VideoFusionModal: React.FC<VideoFusionModalProps> = ({ isOpen, onClose, on
   );
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-2xl w-[500px] max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-blue-600 text-white">
-          <div className="flex items-center gap-2">
-            <Video size={20} />
-            <h2 className="font-semibold">视频融合</h2>
-          </div>
-          <button onClick={onClose} className="text-white hover:text-gray-200">
-            <X size={20} />
+    <div className="w-80">
+      <div className="bg-white rounded-lg shadow-xl border border-gray-200">
+        <div className="bg-white px-4 py-3 rounded-t-lg flex items-center justify-between border-b border-gray-200">
+          <button
+            onClick={onClose}
+            className="text-gray-600 hover:bg-gray-100 rounded p-1 transition-colors"
+          >
+            <ChevronDown size={16} />
           </button>
+          <div className="flex items-center gap-2">
+            <Video size={16} className="text-gray-600" />
+            <span className="text-sm font-medium text-gray-800">视频融合</span>
+          </div>
+          <div className="w-8" />
         </div>
 
         <div className="p-4 max-h-[70vh] overflow-y-auto">
@@ -99,7 +102,7 @@ const VideoFusionModal: React.FC<VideoFusionModalProps> = ({ isOpen, onClose, on
                 value={videoPath}
                 onChange={(e) => setVideoPath(e.target.value)}
                 placeholder="在线或本地文件"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button
                 className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center gap-1"
@@ -123,7 +126,7 @@ const VideoFusionModal: React.FC<VideoFusionModalProps> = ({ isOpen, onClose, on
                 <Settings size={16} className="text-gray-600" />
                 <span className="text-sm font-medium text-gray-700">设置</span>
               </div>
-              {settingsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {settingsExpanded ? <ChevronUp size={16} className="text-gray-600" /> : <ChevronDown size={16} className="text-gray-600" />}
             </div>
 
             {settingsExpanded && (

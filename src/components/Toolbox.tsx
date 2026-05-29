@@ -295,13 +295,6 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
 
   return (
     <>
-      {/* 视频融合弹窗 */}
-      <VideoFusionModal
-        isOpen={videoFusionOpen}
-        onClose={() => setVideoFusionOpen(false)}
-        onExecute={(params) => onExecute?.('视频融合', params)}
-      />
-
       {/* 任务管理中心弹窗 */}
       <TaskManagementCenter
         isOpen={taskManagementOpen}
@@ -317,6 +310,16 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
               onClose={() => setActiveModal(null)}
               toolName={activeModal}
               onExecute={onExecute}
+            />
+          </div>
+        )}
+        {/* 视频融合弹窗放在工具箱左侧 */}
+        {videoFusionOpen && (
+          <div className="absolute right-96 top-0">
+            <VideoFusionModal
+              isOpen={videoFusionOpen}
+              onClose={() => setVideoFusionOpen(false)}
+              onExecute={(params) => onExecute?.('视频融合', params)}
             />
           </div>
         )}
