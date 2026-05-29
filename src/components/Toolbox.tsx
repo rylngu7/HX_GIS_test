@@ -5,7 +5,7 @@ import VideoFusionModal from './VideoFusionModal';
 import TaskManagementCenter from './TaskManagementCenter';
 
 interface ToolboxProps {
-  onExecute?: (toolName: string) => void;
+  onExecute?: (toolName: string, params?: any) => void;
 }
 
 const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
@@ -299,7 +299,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
       <VideoFusionModal
         isOpen={videoFusionOpen}
         onClose={() => setVideoFusionOpen(false)}
-        onExecute={() => onExecute?.('视频融合')}
+        onExecute={(params) => onExecute?.('视频融合', params)}
       />
 
       {/* 任务管理中心弹窗 */}

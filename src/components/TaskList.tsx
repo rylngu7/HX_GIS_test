@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { X, CheckCircle, Clock, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 export interface Task {
@@ -94,9 +94,9 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearComplete
               </button>
             )}
             {isExpanded ? (
-              <ChevronUp size={16} className="text-gray-500" />
+              <ChevronUp size={16} className="text-gray-600" />
             ) : (
-              <ChevronDown size={16} className="text-gray-500" />
+              <ChevronDown size={16} className="text-gray-600" />
             )}
           </div>
         </button>
