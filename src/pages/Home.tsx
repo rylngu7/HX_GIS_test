@@ -21,6 +21,8 @@ export default function Home() {
   const handleExecute = (toolName, params) => {
     if (toolName === '视频融合' && params) {
       setVideoParams(params);
+      setVideoFusionActive(true);
+      startTask(toolName);
     } else if (toolName !== '视频融合') {
       startTask(toolName);
     }
