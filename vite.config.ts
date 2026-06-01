@@ -9,6 +9,7 @@ export default defineConfig({
     sourcemap: 'hidden',
   },
   server: {
+    port: 5175,
     watch: {
       ignored: ['**/.pnpm-store/**', '**/node_modules/**'],
     },
