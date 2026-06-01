@@ -443,19 +443,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
         </select>
       </div>
 
-      <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-700">异步执行</label>
-        <button 
-          className={`w-12 h-6 rounded-full transition-colors ${asyncExecute ? 'bg-blue-600' : 'bg-gray-300'}`}
-          onClick={() => setAsyncExecute(!asyncExecute)}
-        >
-          <div 
-            className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${asyncExecute ? 'translate-x-6' : 'translate-x-0.5'}`}
-            style={{ marginTop: '2px' }}
-          />
-        </button>
-        <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded">如异步执行请到任务结果中查看</span>
-      </div>
+
     </div>
   );
 
@@ -624,8 +612,8 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end">
-      <div className="w-[460px] h-full bg-white shadow-xl flex flex-col">
+    <div className="fixed inset-0 z-[100] flex justify-end pointer-events-none">
+      <div className="w-[560px] h-full bg-white shadow-xl flex flex-col pointer-events-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             {getDataTypeIcon()}
@@ -724,55 +712,57 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
         {showDirectoryPanel && renderDirectorySavePanel()}
 
         {/* 底部按钮区 */}
-        <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+        <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-2 flex-nowrap items-center">
           <button 
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 whitespace-nowrap"
           >
             取消
           </button>
           
-          {/* 导出按钮带下拉菜单 */}
-          {dataType !== '3d' && (
-            <div className="relative">
-              <div className="flex">
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
-                  导出
-                </button>
-                <button 
-                  className="px-2 py-2 bg-blue-600 text-white border-l border-blue-500 rounded-r hover:bg-blue-700 flex items-center"
-                  onClick={() => setShowExportDropdown(!showExportDropdown)}
-                >
-                  <ChevronDown size={16} />
-                </button>
-              </div>
-              
-              {showExportDropdown && (
-                <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
-                  <button 
-                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-gray-100 ${
-                      exportType === 'full' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700'
-                    }`}
-                    onClick={() => exportType !== 'full' && handleExportOptionSelect('local')}
-                    disabled={exportType === 'full'}
-                  >
-                    <span>导出到本地</span>
-                  </button>
-                  <button 
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => handleExportOptionSelect('directory')}
-                  >
-                    <span>导出到数据目录</span>
-                  </button>
-                </div>
-              )}
+          {/* 影像数据条件导出 - 两个独立按钮 + 重置 */}
+          {dataType === 'image' && exportType === 'condition' && (
+            <div className="flex gap-3">
+              <button 
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+                onClick={() => handleExportOptionSelect('local')}
+              >
+                下载到本地
+              </button>
+              <button 
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+                onClick={() => handleExportOptionSelect('directory')}
+              >
+                保存到数据目录
+              </button>
+              <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap">
+                重置
+              </button>
             </div>
           )}
           
-          {/* 重置按钮 - 仅影像条件导出需要 */}
-          {dataType === 'image' && exportType === 'condition' && (
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              重置
+          {/* 矢量数据条件导出 - 两个独立按钮 */}
+          {dataType === 'vector' && exportType === 'condition' && (
+            <div className="flex gap-3">
+              <button 
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+                onClick={() => handleExportOptionSelect('local')}
+              >
+                下载到本地
+              </button>
+              <button 
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+                onClick={() => handleExportOptionSelect('directory')}
+              >
+                保存到数据目录
+              </button>
+            </div>
+          )}
+          
+          {/* 全量导出 - 只有确认按钮 */}
+          {exportType === 'full' && (
+            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap">
+              确认
             </button>
           )}
         </div>
