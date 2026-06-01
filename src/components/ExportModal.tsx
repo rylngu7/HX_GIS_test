@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   X, 
   Folder, 
@@ -40,7 +40,6 @@ type TargetLibrary = 'original' | 'standard' | 'fusion';
 type ExportDestination = 'local' | 'directory' | null;
 
 const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) => {
-  const modalRef = useRef<HTMLDivElement>(null);
   const [exportType, setExportType] = useState<ExportType>('condition');
   const [conditionTab, setConditionTab] = useState<ConditionTab>('attribute');
   const [targetLibrary, setTargetLibrary] = useState<TargetLibrary>('standard');
@@ -53,23 +52,6 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [exportDestination, setExportDestination] = useState<ExportDestination>(null);
   const [showDirectoryPanel, setShowDirectoryPanel] = useState(false);
-
-  // 点击外部关闭弹窗
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
   
   // 查询条件和查询结果折叠状态
   const [showQueryConditions, setShowQueryConditions] = useState(true);
@@ -630,8 +612,8 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end">
-      <div ref={modalRef} className="w-[560px] h-full bg-white shadow-xl flex flex-col">
+    <div className="fixed inset-0 z-[100] flex justify-end pointer-events-none">
+      <div className="w-[560px] h-full bg-white shadow-xl flex flex-col pointer-events-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             {getDataTypeIcon()}
