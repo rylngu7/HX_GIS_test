@@ -497,6 +497,16 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
         <label className="block text-sm font-medium text-gray-700 mb-1">目标库 <span className="text-red-500">*</span></label>
         <div className="flex gap-2">
           <button
+            onClick={() => setTargetLibrary('original')}
+            className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+              targetLibrary === 'original' 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            原始库
+          </button>
+          <button
             onClick={() => setTargetLibrary('standard')}
             className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
               targetLibrary === 'standard' 
@@ -594,6 +604,16 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">目标库 <span className="text-red-500">*</span></label>
         <div className="flex gap-2">
+          <button
+            onClick={() => setTargetLibrary('original')}
+            className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+              targetLibrary === 'original' 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            原始库
+          </button>
           <button
             onClick={() => setTargetLibrary('standard')}
             className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
@@ -732,8 +752,47 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
             取消
           </button>
           
-          {/* 导出按钮带下拉菜单 */}
-          {dataType !== '3d' && (
+          {/* 影像数据条件导出 - 直接显示下载和重置按钮 */}
+          {dataType === 'image' && exportType === 'condition' && (
+            <div className="flex gap-3">
+              <div className="relative">
+                <div className="flex">
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
+                    下载
+                  </button>
+                  <button 
+                    className="px-2 py-2 bg-blue-600 text-white border-l border-blue-500 rounded-r hover:bg-blue-700 flex items-center"
+                    onClick={() => setShowExportDropdown(!showExportDropdown)}
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
+                
+                {showExportDropdown && (
+                  <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
+                    <button 
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => handleExportOptionSelect('local')}
+                    >
+                      <span>导出到本地</span>
+                    </button>
+                    <button 
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => handleExportOptionSelect('directory')}
+                    >
+                      <span>导出到数据目录</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                重置
+              </button>
+            </div>
+          )}
+          
+          {/* 矢量数据条件导出 - 导出按钮带下拉菜单 */}
+          {dataType === 'vector' && exportType === 'condition' && (
             <div className="relative">
               <div className="flex">
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-l hover:bg-blue-700">
@@ -750,11 +809,8 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
               {showExportDropdown && (
                 <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
                   <button 
-                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-gray-100 ${
-                      exportType === 'full' ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700'
-                    }`}
-                    onClick={() => exportType !== 'full' && handleExportOptionSelect('local')}
-                    disabled={exportType === 'full'}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => handleExportOptionSelect('local')}
                   >
                     <span>导出到本地</span>
                   </button>
@@ -769,10 +825,10 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
             </div>
           )}
           
-          {/* 重置按钮 - 仅影像条件导出需要 */}
-          {dataType === 'image' && exportType === 'condition' && (
+          {/* 全量导出 - 只有确认按钮 */}
+          {exportType === 'full' && (
             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              重置
+              确认
             </button>
           )}
         </div>
