@@ -769,7 +769,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
       </div>
 
       {showNewDirectoryModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 pointer-events-auto">
           <div className="bg-white rounded-lg shadow-xl w-80 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-800">新增目录</h3>
