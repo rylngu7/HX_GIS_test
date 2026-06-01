@@ -503,16 +503,6 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
         <label className="block text-sm font-medium text-gray-700 mb-1">目标库 <span className="text-red-500">*</span></label>
         <div className="flex gap-2">
           <button
-            onClick={() => setTargetLibrary('original')}
-            className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
-              targetLibrary === 'original' 
-                ? 'bg-blue-600 text-white border-blue-600' 
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            原始库
-          </button>
-          <button
             onClick={() => setTargetLibrary('standard')}
             className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
               targetLibrary === 'standard' 
@@ -611,12 +601,6 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
         <label className="block text-sm font-medium text-gray-700 mb-1">目标库 <span className="text-red-500">*</span></label>
         <div className="flex gap-2">
           <button
-            disabled
-            className={`flex-1 px-3 py-2 text-sm rounded border transition-colors bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed`}
-          >
-            原始库
-          </button>
-          <button
             onClick={() => setTargetLibrary('standard')}
             className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
               targetLibrary === 'standard' 
@@ -647,7 +631,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
-      <div ref={modalRef} className="w-[460px] h-full bg-white shadow-xl flex flex-col">
+      <div ref={modalRef} className="w-[560px] h-full bg-white shadow-xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             {getDataTypeIcon()}
@@ -746,10 +730,10 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
         {showDirectoryPanel && renderDirectorySavePanel()}
 
         {/* 底部按钮区 */}
-        <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+        <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-2 flex-nowrap items-center">
           <button 
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 whitespace-nowrap"
           >
             取消
           </button>
@@ -758,18 +742,18 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
           {dataType === 'image' && exportType === 'condition' && (
             <div className="flex gap-3">
               <button 
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
                 onClick={() => handleExportOptionSelect('local')}
               >
                 下载到本地
               </button>
               <button 
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
                 onClick={() => handleExportOptionSelect('directory')}
               >
                 保存到数据目录
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap">
                 重置
               </button>
             </div>
@@ -779,13 +763,13 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
           {dataType === 'vector' && exportType === 'condition' && (
             <div className="flex gap-3">
               <button 
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
                 onClick={() => handleExportOptionSelect('local')}
               >
                 下载到本地
               </button>
               <button 
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
                 onClick={() => handleExportOptionSelect('directory')}
               >
                 保存到数据目录
@@ -795,7 +779,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, dataType }) 
           
           {/* 全量导出 - 只有确认按钮 */}
           {exportType === 'full' && (
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap">
               确认
             </button>
           )}
