@@ -22,9 +22,10 @@ const VideoFusionModal: React.FC<VideoFusionModalProps> = ({ isOpen, onClose, on
     pitch: -90,
     roll: 0,
     opacity: 1.0,
-    feather: 0.5,
-    showFrame: false
+    feather: 0.5
   });
+  
+  const [showFrame, setShowFrame] = useState(false);
 
   if (!isOpen) return null;
 
@@ -37,12 +38,13 @@ const VideoFusionModal: React.FC<VideoFusionModalProps> = ({ isOpen, onClose, on
   const handleFlyIn = () => {
     onExecute?.({
       videoPath,
-      ...params
+      ...params,
+      showFrame
     });
     onClose();
   };
 
-  const updateParam = (key: string, value: number | boolean) => {
+  const updateParam = (key: string, value: number) => {
     setParams(prev => ({
       ...prev,
       [key]: value
@@ -141,8 +143,8 @@ const VideoFusionModal: React.FC<VideoFusionModalProps> = ({ isOpen, onClose, on
                       <input
                         type="checkbox"
                         id="showFrame"
-                        checked={params.showFrame}
-                        onChange={(e) => updateParam('showFrame', e.target.checked)}
+                        checked={showFrame}
+                        onChange={(e) => setShowFrame(e.target.checked)}
                         className="w-4 h-4"
                       />
                       <label htmlFor="showFrame" className="text-sm text-gray-700">显隐线框</label>
@@ -164,8 +166,8 @@ const VideoFusionModal: React.FC<VideoFusionModalProps> = ({ isOpen, onClose, on
                       <input
                         type="checkbox"
                         id="showFrame"
-                        checked={params.showFrame}
-                        onChange={(e) => updateParam('showFrame', e.target.checked)}
+                        checked={showFrame}
+                        onChange={(e) => setShowFrame(e.target.checked)}
                         className="w-4 h-4"
                       />
                       <label htmlFor="showFrame" className="text-sm text-gray-700">显隐线框</label>
