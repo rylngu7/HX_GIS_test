@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite, ListTodo } from 'lucide-react';
 import RemoteSensingModal from './RemoteSensingModal';
 import VideoFusionModal from './VideoFusionModal';
+import ImageFusionModal from './ImageFusionModal';
 import TaskManagementCenter from './TaskManagementCenter';
 
 interface ToolboxProps {
@@ -13,6 +14,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
   const [expandedSections, setExpandedSections] = useState<string[]>(['空间分析', '几何分析', '遥感算法', '地图输出']);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [videoFusionOpen, setVideoFusionOpen] = useState(false);
+  const [imageFusionOpen, setImageFusionOpen] = useState(false);
   const [taskManagementOpen, setTaskManagementOpen] = useState(false);
 
   const toggleSection = (section: string) => {
@@ -58,6 +60,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
     { name: '正射校正', icon: 'ortho', disabled: false },
     { name: '影像匀色', icon: 'color', disabled: false },
     { name: '影像镶嵌', icon: 'mosaic', disabled: false },
+    { name: '影像融合', icon: 'fusion', disabled: false },
     { name: '波段合成', icon: 'bandComposite', disabled: false },
   ];
 
@@ -70,6 +73,8 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
     if (!disabled && !noModal) {
       if (toolName === '视频融合') {
         setVideoFusionOpen(true);
+      } else if (toolName === '影像融合') {
+        setImageFusionOpen(true);
       } else {
         setActiveModal(toolName);
       }
@@ -320,6 +325,17 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
               isOpen={videoFusionOpen}
               onClose={() => setVideoFusionOpen(false)}
               onExecute={(params) => onExecute?.('视频融合', params)}
+            />
+          </div>
+        )}
+        
+        {/* 影像融合弹窗放在工具箱左侧 */}
+        {imageFusionOpen && (
+          <div className="absolute right-96 top-0">
+            <ImageFusionModal
+              isOpen={imageFusionOpen}
+              onClose={() => setImageFusionOpen(false)}
+              onExecute={(params) => onExecute?.('影像融合', params)}
             />
           </div>
         )}
