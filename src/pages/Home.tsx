@@ -79,6 +79,10 @@ export default function Home() {
             videoFusionActive={videoFusionActive}
             videoParams={videoParams}
             onClearVideo={handleClearVideo}
+            onToggleTaskCenter={handleToggleTaskCenter}
+            onToggleToolbox={handleToggleToolbox}
+            hasTasks={tasks.length > 0}
+            toolboxOpen={toolboxOpen}
           />
           {toolboxOpen && <Toolbox onExecute={handleExecute} />}
         </div>

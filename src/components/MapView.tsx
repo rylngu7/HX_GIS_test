@@ -15,7 +15,9 @@ import {
   Layers,
   X,
   Play,
-  Pause
+  Pause,
+  Clock,
+  Briefcase
 } from 'lucide-react';
 
 interface MapViewProps {
@@ -23,13 +25,21 @@ interface MapViewProps {
   videoFusionActive?: boolean;
   videoParams?: any;
   onClearVideo?: () => void;
+  onToggleTaskCenter?: () => void;
+  onToggleToolbox?: () => void;
+  hasTasks?: boolean;
+  toolboxOpen?: boolean;
 }
 
 const MapView: React.FC<MapViewProps> = ({ 
   selectedLayerName, 
   videoFusionActive, 
   videoParams, 
-  onClearVideo 
+  onClearVideo,
+  onToggleTaskCenter,
+  onToggleToolbox,
+  hasTasks,
+  toolboxOpen
 }) => {
   const [zoomToLayer, setZoomToLayer] = useState(false);
   const [videoPlaying, setVideoPlaying] = useState(false);
@@ -177,6 +187,37 @@ const MapView: React.FC<MapViewProps> = ({
 
           {/* 顶部控制栏 */}
           <div className="absolute top-4 right-4 flex gap-2 z-50">
+            {/* 任务管理中心按钮 */}
+            {onToggleTaskCenter && (
+              <button
+                onClick={onToggleTaskCenter}
+                className={`relative w-10 h-10 bg-white border border-gray-200 rounded-lg shadow-sm flex items-center justify-center hover:bg-gray-50 ${
+                  hasTasks ? 'border-blue-400' : ''
+                }`}
+                title="任务管理中心"
+              >
+                <Clock size={18} className="text-gray-700" />
+                {hasTasks && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                    ●
+                  </span>
+                )}
+              </button>
+            )}
+            
+            {/* 工具箱按钮 */}
+            {onToggleToolbox && (
+              <button
+                onClick={onToggleToolbox}
+                className={`w-10 h-10 bg-white border border-gray-200 rounded-lg shadow-sm flex items-center justify-center hover:bg-gray-50 ${
+                  toolboxOpen ? 'border-blue-400' : ''
+                }`}
+                title="工具箱"
+              >
+                <Briefcase size={18} className="text-gray-700" />
+              </button>
+            )}
+            
             <div className="flex bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
               <button className="px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-r border-gray-200">
                 <Scan size={18} />

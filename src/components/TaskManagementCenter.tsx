@@ -301,7 +301,7 @@ const TaskManagementCenter: React.FC<TaskManagementCenterProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-16 right-[420px] z-[150]">
+    <div className="fixed top-16 right-[150px] z-[150]">
       <div className="bg-white rounded-lg shadow-2xl w-[480px] max-h-[70vh] overflow-hidden border border-gray-200">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center gap-2">
