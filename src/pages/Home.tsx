@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import MapView from '../components/MapView';
 import Toolbox from '../components/Toolbox';
 import TaskManagementCenter from '../components/TaskManagementCenter';
+import ModelCompute from '../components/ModelCompute';
 import { useTaskManager, useTaskSimulation } from '../components/TaskList';
 import ExportModal from '../components/ExportModal';
 import UploadFileModal from '../components/UploadFileModal';
@@ -18,6 +19,7 @@ export default function Home() {
   const [videoParams, setVideoParams] = useState<any>(null);
   const [taskCenterOpen, setTaskCenterOpen] = useState(false);
   const [toolboxOpen, setToolboxOpen] = useState(false);
+  const [activeNav, setActiveNav] = useState('数据管理');
 
   const { tasks, addTask, updateTaskProgress, closeTask, clearCompleted } = useTaskManager();
   const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
@@ -53,9 +55,12 @@ export default function Home() {
     setToolboxOpen(!toolboxOpen);
   };
 
-  return (
-    <div className="h-screen flex flex-col">
-      <Header />
+  const renderContent = () => {
+    if (activeNav === '模型计算') {
+      return <ModelCompute />;
+    }
+
+    return (
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           onExportClick={handleExportClick}
@@ -63,7 +68,7 @@ export default function Home() {
           onUploadClick={handleUploadClick}
         />
         <div className="flex-1 relative">
-          <MapView 
+          <MapView
             selectedLayerName={selectedLayerName}
             videoFusionActive={videoFusionActive}
             videoParams={videoParams}
@@ -100,9 +105,18 @@ export default function Home() {
           {toolboxOpen && <Toolbox onExecute={handleExecute} />}
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="h-screen flex flex-col">
+      <Header activeNav={activeNav} onNavChange={setActiveNav} />
+      <div className="flex-1 flex overflow-hidden">
+        {renderContent()}
+      </div>
 
       {/* 任务管理中心 */}
-      {taskCenterOpen && (
+      {taskCenterOpen && activeNav === '数据管理' && (
         <TaskManagementCenter
           isOpen={taskCenterOpen}
           onClose={() => setTaskCenterOpen(false)}
@@ -113,17 +127,21 @@ export default function Home() {
       )}
 
       {/* 导出弹窗 */}
-      <ExportModal
-        isOpen={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        dataType={exportDataType}
-      />
+      {activeNav === '数据管理' && (
+        <ExportModal
+          isOpen={exportModalOpen}
+          onClose={() => setExportModalOpen(false)}
+          dataType={exportDataType}
+        />
+      )}
 
       {/* 上传文件弹窗 */}
-      <UploadFileModal
-        isOpen={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-      />
+      {activeNav === '数据管理' && (
+        <UploadFileModal
+          isOpen={uploadModalOpen}
+          onClose={() => setUploadModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
