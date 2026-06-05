@@ -17,7 +17,7 @@ export default function Home() {
   const [videoFusionActive, setVideoFusionActive] = useState(false);
   const [videoParams, setVideoParams] = useState<any>(null);
   const [taskCenterOpen, setTaskCenterOpen] = useState(false);
-  const [toolboxOpen, setToolboxOpen] = useState(true);
+  const [toolboxOpen, setToolboxOpen] = useState(false);
 
   const { tasks, addTask, updateTaskProgress, closeTask, clearCompleted } = useTaskManager();
   const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
