@@ -185,38 +185,38 @@ const MapView: React.FC<MapViewProps> = ({
             </div>
           )}
 
-          {/* 顶部控制栏 */}
-          <div className="absolute top-4 right-4 flex gap-2 z-50">
+          {/* 顶部控制栏 - 任务管理中心和工具箱按钮 */}
+          <div className="absolute top-4 right-64 flex gap-2 z-[100]">
             {/* 任务管理中心按钮 */}
-            {onToggleTaskCenter && (
-              <button
-                onClick={onToggleTaskCenter}
-                className={`relative w-10 h-10 bg-white border border-gray-200 rounded-lg shadow-sm flex items-center justify-center hover:bg-gray-50 ${
-                  hasTasks ? 'border-blue-400' : ''
-                }`}
-                title="任务管理中心"
-              >
-                <Clock size={18} className="text-gray-700" />
-                {hasTasks && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
-                    ●
-                  </span>
-                )}
-              </button>
-            )}
+            <button
+              onClick={onToggleTaskCenter}
+              className={`relative w-12 h-12 bg-white border-2 border-gray-300 rounded-xl shadow-md flex items-center justify-center hover:bg-gray-50 hover:border-blue-500 transition-all ${
+                hasTasks ? 'border-blue-500 ring-2 ring-blue-200' : ''
+              }`}
+              title="任务管理中心"
+            >
+              <Clock size={22} className="text-blue-600" />
+              {hasTasks && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  !
+                </span>
+              )}
+            </button>
             
             {/* 工具箱按钮 */}
-            {onToggleToolbox && (
-              <button
-                onClick={onToggleToolbox}
-                className={`w-10 h-10 bg-white border border-gray-200 rounded-lg shadow-sm flex items-center justify-center hover:bg-gray-50 ${
-                  toolboxOpen ? 'border-blue-400' : ''
-                }`}
-                title="工具箱"
-              >
-                <Briefcase size={18} className="text-gray-700" />
-              </button>
-            )}
+            <button
+              onClick={onToggleToolbox}
+              className={`w-12 h-12 bg-white border-2 border-gray-300 rounded-xl shadow-md flex items-center justify-center hover:bg-gray-50 hover:border-blue-500 transition-all ${
+                toolboxOpen ? 'border-blue-500 ring-2 ring-blue-200' : ''
+              }`}
+              title="工具箱"
+            >
+              <Briefcase size={22} className="text-blue-600" />
+            </button>
+          </div>
+          
+          {/* 原有控制栏 */}
+          <div className="absolute top-4 right-4 flex gap-2 z-50">
             
             <div className="flex bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
               <button className="px-4 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-r border-gray-200">
