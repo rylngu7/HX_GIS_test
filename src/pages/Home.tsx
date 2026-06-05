@@ -7,6 +7,7 @@ import TaskManagementCenter from '../components/TaskManagementCenter';
 import { useTaskManager, useTaskSimulation } from '../components/TaskList';
 import ExportModal from '../components/ExportModal';
 import UploadFileModal from '../components/UploadFileModal';
+import { Clock, Briefcase } from 'lucide-react';
 
 export default function Home() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -21,29 +22,22 @@ export default function Home() {
   const { tasks, addTask, updateTaskProgress, closeTask, clearCompleted } = useTaskManager();
   const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
 
-  const handleExecute = (toolName, params) => {
+  const handleExecute = (toolName: string, params?: any) => {
     if (toolName === '视频融合' && params) {
       setVideoParams(params);
       setVideoFusionActive(true);
-      startTask(toolName);
-    } else if (toolName !== '视频融合') {
-      startTask(toolName);
     }
-    // 打开任务管理中心
+    startTask(toolName);
     setTaskCenterOpen(true);
   };
 
-  const handleExportClick = (dataType) => {
+  const handleExportClick = (dataType: "vector" | "image" | "3d") => {
     setExportDataType(dataType);
     setExportModalOpen(true);
   };
 
   const handleUploadClick = () => {
     setUploadModalOpen(true);
-  };
-
-  const handleSetVideoParams = (params: any) => {
-    setVideoParams(params);
   };
 
   const handleClearVideo = () => {
@@ -61,12 +55,7 @@ export default function Home() {
 
   return (
     <div className="h-screen flex flex-col">
-      <Header 
-        onToggleTaskCenter={handleToggleTaskCenter} 
-        onToggleToolbox={handleToggleToolbox}
-        hasTasks={tasks.length > 0} 
-        toolboxOpen={toolboxOpen}
-      />
+      <Header />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           onExportClick={handleExportClick}
@@ -79,11 +68,35 @@ export default function Home() {
             videoFusionActive={videoFusionActive}
             videoParams={videoParams}
             onClearVideo={handleClearVideo}
-            onToggleTaskCenter={handleToggleTaskCenter}
-            onToggleToolbox={handleToggleToolbox}
-            hasTasks={tasks.length > 0}
-            toolboxOpen={toolboxOpen}
           />
+
+          {/* 地图右上角图标按钮 */}
+          <div className="absolute top-4 right-4 flex gap-2 z-[200]">
+            <button
+              onClick={handleToggleTaskCenter}
+              className={`relative w-10 h-10 bg-white border-2 border-gray-300 rounded-lg shadow-md flex items-center justify-center hover:bg-gray-50 hover:border-blue-500 transition-all cursor-pointer ${
+                tasks.length > 0 ? 'border-blue-500 ring-2 ring-blue-200' : ''
+              }`}
+              title="任务管理中心"
+            >
+              <Clock size={20} className="text-blue-600" />
+              {tasks.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                  !
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handleToggleToolbox}
+              className={`w-10 h-10 bg-white border-2 border-gray-300 rounded-lg shadow-md flex items-center justify-center hover:bg-gray-50 hover:border-blue-500 transition-all cursor-pointer ${
+                toolboxOpen ? 'border-blue-500 ring-2 ring-blue-200' : ''
+              }`}
+              title="工具箱"
+            >
+              <Briefcase size={20} className="text-blue-600" />
+            </button>
+          </div>
+
           {toolboxOpen && <Toolbox onExecute={handleExecute} />}
         </div>
       </div>
