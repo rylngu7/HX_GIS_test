@@ -16,6 +16,7 @@ export default function Home() {
   const [videoFusionActive, setVideoFusionActive] = useState(false);
   const [videoParams, setVideoParams] = useState<any>(null);
   const [taskCenterOpen, setTaskCenterOpen] = useState(false);
+  const [toolboxOpen, setToolboxOpen] = useState(true);
 
   const { tasks, addTask, updateTaskProgress, closeTask, clearCompleted } = useTaskManager();
   const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
@@ -54,9 +55,18 @@ export default function Home() {
     setTaskCenterOpen(!taskCenterOpen);
   };
 
+  const handleToggleToolbox = () => {
+    setToolboxOpen(!toolboxOpen);
+  };
+
   return (
     <div className="h-screen flex flex-col">
-      <Header onToggleTaskCenter={handleToggleTaskCenter} hasTasks={tasks.length > 0} />
+      <Header 
+        onToggleTaskCenter={handleToggleTaskCenter} 
+        onToggleToolbox={handleToggleToolbox}
+        hasTasks={tasks.length > 0} 
+        toolboxOpen={toolboxOpen}
+      />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           onExportClick={handleExportClick}
@@ -70,18 +80,20 @@ export default function Home() {
             videoParams={videoParams}
             onClearVideo={handleClearVideo}
           />
-          <Toolbox onExecute={handleExecute} />
+          {toolboxOpen && <Toolbox onExecute={handleExecute} />}
         </div>
       </div>
 
       {/* 任务管理中心 */}
-      <TaskManagementCenter
-        isOpen={taskCenterOpen}
-        onClose={() => setTaskCenterOpen(false)}
-        tasks={tasks}
-        onCloseTask={closeTask}
-        onClearCompleted={clearCompleted}
-      />
+      {taskCenterOpen && (
+        <TaskManagementCenter
+          isOpen={taskCenterOpen}
+          onClose={() => setTaskCenterOpen(false)}
+          tasks={tasks}
+          onCloseTask={closeTask}
+          onClearCompleted={clearCompleted}
+        />
+      )}
 
       {/* 导出弹窗 */}
       <ExportModal

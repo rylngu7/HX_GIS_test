@@ -1,12 +1,14 @@
 import React from 'react';
-import { Bell, Plane, User, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Bell, Plane, User, Clock, BriefcaseBusiness } from 'lucide-react';
 
 interface HeaderProps {
   onToggleTaskCenter: () => void;
+  onToggleToolbox: () => void;
   hasTasks: boolean;
+  toolboxOpen: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onToggleTaskCenter, hasTasks }) => {
+const Header: React.FC<HeaderProps> = ({ onToggleTaskCenter, onToggleToolbox, hasTasks, toolboxOpen }) => {
   return (
     <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white h-14 flex items-center px-6 justify-between">
       <div className="flex items-center gap-8">
@@ -25,9 +27,12 @@ const Header: React.FC<HeaderProps> = ({ onToggleTaskCenter, hasTasks }) => {
         </button>
         <Plane size={20} />
         <Bell size={20} />
+        
+        {/* 任务管理中心按钮 */}
         <button
           onClick={onToggleTaskCenter}
           className={`relative p-2 rounded hover:bg-white/20 transition-colors ${hasTasks ? 'bg-white/10' : ''}`}
+          title="任务管理中心"
         >
           <Clock size={20} />
           {hasTasks && (
@@ -36,6 +41,16 @@ const Header: React.FC<HeaderProps> = ({ onToggleTaskCenter, hasTasks }) => {
             </span>
           )}
         </button>
+        
+        {/* 工具箱按钮 */}
+        <button
+          onClick={onToggleToolbox}
+          className={`relative p-2 rounded hover:bg-white/20 transition-colors ${toolboxOpen ? 'bg-white/10' : ''}`}
+          title="工具箱"
+        >
+          <BriefcaseBusiness size={20} />
+        </button>
+        
         <User size={20} />
       </div>
     </header>
