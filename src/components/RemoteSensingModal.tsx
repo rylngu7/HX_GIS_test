@@ -53,14 +53,40 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     '矫正图.tif': ['B1 [uint16]', 'B2 [uint16]', 'B3 [uint16]'],
     '预处理流程-TT8Y9713428358001': ['B1 [uint16]', 'B2 [uint16]', 'B3 [uint16]', 'B4 [uint16]']
   };
+  
+  // 影像融合专用状态
+  const [panLayer, setPanLayer] = useState('');
+  const [msLayer, setMsLayer] = useState('');
+  const [isPanDropdownOpen, setIsPanDropdownOpen] = useState(false);
+  const [isMsDropdownOpen, setIsMsDropdownOpen] = useState(false);
+  const availablePanLayers = ['PAN_影像1.tif', 'PAN_影像2.tif', 'PAN_影像3.tif'];
+  const availableMsLayers = ['MS_影像1.tif', 'MS_影像2.tif', 'MS_影像3.tif'];
 
   useMemo(() => {
     setResultName(`${toolName}-${generateRandomId()}`);
+    // 重置影像融合状态
+    if (toolName === '影像融合') {
+      setPanLayer('');
+      setMsLayer('');
+    }
   }, [toolName]);
 
   if (!isOpen) return null;
 
   const handleExecute = () => {
+    // 如果是影像融合，需要特殊处理
+    if (toolName === '影像融合') {
+      // 检查两个图层是否属于同一区域（这里简化模拟：假设数字相同就是同一区域）
+      const panNumber = panLayer.match(/\d+/)?.[0] || '';
+      const msNumber = msLayer.match(/\d+/)?.[0] || '';
+      const sameRegion = panNumber === msNumber;
+
+      if (!sameRegion) {
+        alert('执行失败：全色影像和多光谱影像区域不一致！');
+        return;
+      }
+    }
+    
     if (onExecute) {
       onExecute(toolName);
     }
@@ -557,61 +583,123 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
     </div>
   );
 
-  const renderFusionInterface = () => (
-    <div className="p-4 space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 结果名称
-        </label>
-        <div className="relative">
-          <input
-            type="text"
-            value={resultName}
-            onChange={(e) => setResultName(e.target.value)}
+  const renderFusionInterface = () => {
+
+    return (
+      <div className="p-4 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> 结果名称
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={resultName}
+              onChange={(e) => setResultName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              maxLength={20}
+            />
+            <span className="absolute right-3 top-2 text-xs text-gray-400">
+              {resultName.length}/20
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> 全色影像 (PAN)
+          </label>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsPanDropdownOpen(!isPanDropdownOpen)}
+              className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
+            >
+              <span>{panLayer || ''}</span>
+              <ChevronDown size={16} />
+            </button>
+            
+            {isPanDropdownOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+                {availablePanLayers.map(layer => (
+                  <div 
+                    key={layer}
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${panLayer === layer ? 'bg-blue-50' : ''}`}
+                    onClick={() => {
+                      setPanLayer(layer);
+                      setIsPanDropdownOpen(false);
+                    }}
+                  >
+                    <span className="text-sm">{layer}</span>
+                    {panLayer === layer && (
+                      <span className="text-blue-600">✓</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> 多光谱影像 (MS)
+          </label>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsMsDropdownOpen(!isMsDropdownOpen)}
+              className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
+            >
+              <span>{msLayer || ''}</span>
+              <ChevronDown size={16} />
+            </button>
+            
+            {isMsDropdownOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+                {availableMsLayers.map(layer => (
+                  <div 
+                    key={layer}
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${msLayer === layer ? 'bg-blue-50' : ''}`}
+                    onClick={() => {
+                      setMsLayer(layer);
+                      setIsMsDropdownOpen(false);
+                    }}
+                  >
+                    <span className="text-sm">{layer}</span>
+                    {msLayer === layer && (
+                      <span className="text-blue-600">✓</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="text-red-500">*</span> 融合算法
+          </label>
+          <select
+            value={fusionAlgorithm}
+            onChange={(e) => setFusionAlgorithm(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            maxLength={20}
-          />
-          <span className="absolute right-3 top-2 text-xs text-gray-400">
-            {resultName.length}/20
-          </span>
+          >
+            <option value="Brovey">Brovey</option>
+            <option value="PCA">PCA</option>
+            <option value="SFIM">SFIM</option>
+            <option value="HSV">HSV</option>
+          </select>
+        </div>
+
+        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded flex items-start gap-2">
+          <Info size={14} className="flex-shrink-0 mt-0.5" />
+          <span>影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。请选择同一区域的全色和多光谱影像。</span>
         </div>
       </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 图层数据
-        </label>
-        <select
-          value={selectedLayer}
-          onChange={(e) => setSelectedLayer(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">请选择</option>
-          <option value="影像1.tif">影像1.tif</option>
-          <option value="影像2.tif">影像2.tif</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          <span className="text-red-500">*</span> 算法
-        </label>
-        <select
-          value={fusionAlgorithm}
-          onChange={(e) => setFusionAlgorithm(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="Brovey">Brovey</option>
-          <option value="PCA">PCA</option>
-          <option value="SFIM">SFIM</option>
-        </select>
-      </div>
-
-      <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-        影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderOrthoCorrectionInterface = () => (
     <div className="p-4 space-y-4">
@@ -1110,7 +1198,8 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
         <div className="px-4 py-3 bg-blue-600 rounded-b-lg flex justify-center">
           <button
             onClick={handleExecute}
-            className="px-8 py-2 text-white font-medium hover:bg-blue-700 transition-colors"
+            disabled={toolName === '影像融合' && (!panLayer || !msLayer)}
+            className="px-8 py-2 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             开始执行
           </button>
