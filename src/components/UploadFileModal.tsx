@@ -17,7 +17,7 @@ export default function UploadFileModal(props) {
       case 'raster':
         return 'tif, tiff';
       case 'original-image':
-        return 'zip';
+        return 'zip, tar.gz';
       case '3d':
         return 'zip';
       default:
@@ -164,12 +164,12 @@ export default function UploadFileModal(props) {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="text-sm text-blue-800">
                 <div className="font-medium mb-2">格式限制</div>
-                <p>仅支持 ZIP 格式</p>
+                <p>仅支持 ZIP、TAR.GZ 格式</p>
               </div>
               <div className="text-sm text-blue-800 mt-3">
                 <div className="font-medium mb-2">数据限制</div>
                 <p>仅支持以下卫星数据：</p>
-                <p className="mt-1">LandSat 8/9、Sentinel 2、MODIS、GF 1/2/6、资源三号</p>
+                <p className="mt-1">高分1A、高分1B、Landsat 8、资源三号02、高分2</p>
               </div>
             </div>
           )}

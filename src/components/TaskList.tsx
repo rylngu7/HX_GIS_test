@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { X, CheckCircle, Clock, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { X, CheckCircle, Clock, ChevronDown, ChevronUp, Trash2, Layers, Download, FolderOpen } from 'lucide-react';
 
 export interface Task {
   id: string;
@@ -17,6 +17,21 @@ interface TaskListProps {
 
 const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose }) => {
   const progressPercentage = Math.min(task.progress, 100);
+
+  const handleExportToLayer = (e) => {
+    e.stopPropagation();
+    console.log('导出到图层管理:', task.id);
+  };
+
+  const handleDownload = (e) => {
+    e.stopPropagation();
+    console.log('下载到本地:', task.id);
+  };
+
+  const handleSaveToDirectory = (e) => {
+    e.stopPropagation();
+    console.log('另存到数据目录:', task.id);
+  };
 
   return (
     <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-200">
@@ -54,6 +69,31 @@ const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose
               {new Date(task.createdAt).toLocaleTimeString()}
             </span>
           </div>
+          {task.isComplete && (
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={handleExportToLayer}
+                className="flex items-center justify-center p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                title="导出到图层管理"
+              >
+                <Layers size={16} />
+              </button>
+              <button
+                onClick={handleDownload}
+                className="flex items-center justify-center p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded transition-colors"
+                title="下载到本地"
+              >
+                <Download size={16} />
+              </button>
+              <button
+                onClick={handleSaveToDirectory}
+                className="flex items-center justify-center p-2 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                title="另存到数据目录"
+              >
+                <FolderOpen size={16} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

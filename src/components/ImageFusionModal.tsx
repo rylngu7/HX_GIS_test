@@ -11,26 +11,32 @@ const generateRandomId = () => Math.random().toString(36).substring(2, 8).toUppe
 
 const ImageFusionModal: React.FC<ImageFusionModalProps> = ({ isOpen, onClose, onExecute }) => {
   const [resultName, setResultName] = useState(`影像融合-${generateRandomId()}`);
-  const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
+  const [panLayer, setPanLayer] = useState<string>('');
+  const [msLayer, setMsLayer] = useState<string>('');
   const [fusionAlgorithm, setFusionAlgorithm] = useState('Brovey');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isPanDropdownOpen, setIsPanDropdownOpen] = useState(false);
+  const [isMsDropdownOpen, setIsMsDropdownOpen] = useState(false);
   
-  const availableLayers = ['影像1.tif', '影像2.tif', '影像3.tif', '影像4.tif'];
+  const availablePanLayers = ['PAN_影像1.tif', 'PAN_影像2.tif', 'PAN_影像3.tif'];
+  const availableMsLayers = ['MS_影像1.tif', 'MS_影像2.tif', 'MS_影像3.tif'];
 
   if (!isOpen) return null;
 
-  const toggleLayer = (layer: string) => {
-    setSelectedLayers(prev => 
-      prev.includes(layer) 
-        ? prev.filter(l => l !== layer) 
-        : [...prev, layer]
-    );
-  };
-
   const handleExecute = () => {
+    // 检查两个图层是否属于同一区域（这里简化模拟：假设数字相同就是同一区域）
+    const panNumber = panLayer.match(/\d+/)?.[0] || '';
+    const msNumber = msLayer.match(/\d+/)?.[0] || '';
+    const sameRegion = panNumber === msNumber;
+
+    if (!sameRegion) {
+      alert('执行失败：全色影像和多光谱影像区域不一致！');
+      return;
+    }
+
     onExecute?.({
       resultName,
-      selectedLayers,
+      panLayer,
+      msLayer,
       fusionAlgorithm
     });
     onClose();
@@ -73,28 +79,31 @@ const ImageFusionModal: React.FC<ImageFusionModalProps> = ({ isOpen, onClose, on
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              <span className="text-red-500">*</span> 图层数据
+              <span className="text-red-500">*</span> 全色影像 (PAN)
             </label>
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                onClick={() => setIsPanDropdownOpen(!isPanDropdownOpen)}
                 className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
               >
-                <span>{selectedLayers.length > 0 ? `已选择 ${selectedLayers.length} 项` : ''}</span>
+                <span>{panLayer || ''}</span>
                 <ChevronDown size={16} />
               </button>
               
-              {isDropdownOpen && (
+              {isPanDropdownOpen && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
-                  {availableLayers.map(layer => (
+                  {availablePanLayers.map(layer => (
                     <div 
                       key={layer}
-                      className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${selectedLayers.includes(layer) ? 'bg-blue-50' : ''}`}
-                      onClick={() => toggleLayer(layer)}
+                      className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${panLayer === layer ? 'bg-blue-50' : ''}`}
+                      onClick={() => {
+                        setPanLayer(layer);
+                        setIsPanDropdownOpen(false);
+                      }}
                     >
                       <span className="text-sm">{layer}</span>
-                      {selectedLayers.includes(layer) && (
+                      {panLayer === layer && (
                         <span className="text-blue-600">✓</span>
                       )}
                     </div>
@@ -102,26 +111,42 @@ const ImageFusionModal: React.FC<ImageFusionModalProps> = ({ isOpen, onClose, on
                 </div>
               )}
             </div>
-            
-            {selectedLayers.length > 0 && (
-              <div className="mt-2 space-y-1">
-                {selectedLayers.map(layer => (
-                  <div 
-                    key={layer}
-                    className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded"
-                  >
-                    <span className="text-sm">{layer}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleLayer(layer)}
-                      className="text-blue-500 hover:text-blue-700 ml-2"
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <span className="text-red-500">*</span> 多光谱影像 (MS)
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsMsDropdownOpen(!isMsDropdownOpen)}
+                className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
+              >
+                <span>{msLayer || ''}</span>
+                <ChevronDown size={16} />
+              </button>
+              
+              {isMsDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+                  {availableMsLayers.map(layer => (
+                    <div 
+                      key={layer}
+                      className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${msLayer === layer ? 'bg-blue-50' : ''}`}
+                      onClick={() => {
+                        setMsLayer(layer);
+                        setIsMsDropdownOpen(false);
+                      }}
                     >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                      <span className="text-sm">{layer}</span>
+                      {msLayer === layer && (
+                        <span className="text-blue-600">✓</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -142,14 +167,14 @@ const ImageFusionModal: React.FC<ImageFusionModalProps> = ({ isOpen, onClose, on
 
           <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded flex items-start gap-2">
             <Info size={14} className="flex-shrink-0 mt-0.5" />
-            <span>影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。</span>
+            <span>影像融合功能能够将不同时间、不同角度或不同波段的影像数据融合，提高影像的分辨率和信息量。请选择同一区域的全色和多光谱影像。</span>
           </div>
         </div>
 
         <div className="px-4 py-3 bg-blue-600 rounded-b-lg flex justify-center">
           <button
             onClick={handleExecute}
-            disabled={selectedLayers.length < 2}
+            disabled={!panLayer || !msLayer}
             className="px-8 py-2 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             开始执行
