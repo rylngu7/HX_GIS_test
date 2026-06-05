@@ -298,7 +298,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
 
   return (
     <>
-      <div className="absolute right-4 top-20 z-[60]">
+      <div className="absolute right-4 top-28 z-[60]">
         {/* 弹窗放在工具箱左侧 */}
         {activeModal && (
           <div className="absolute right-96 top-0">

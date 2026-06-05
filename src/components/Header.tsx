@@ -8,7 +8,7 @@ interface HeaderProps {
   toolboxOpen?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = () => {
+const Header: React.FC<HeaderProps> = ({ }) => {
   return (
     <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white h-14 flex items-center px-6 justify-between">
       <div className="flex items-center gap-8">
