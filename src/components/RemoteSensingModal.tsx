@@ -1167,6 +1167,8 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
         return renderColorCorrectionInterface();
       case '影像镶嵌':
         return renderMosaicInterface();
+      case '影像融合':
+        return renderFusionInterface();
       case '波段合成':
         return renderBandCompositeInterface();
       case '投影系统转换':
