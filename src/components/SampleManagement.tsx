@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Search, Plus, Image as ImageIcon, ChevronLeft, Trash2, Edit, MoreVertical, CheckSquare, Square } from 'lucide-react';
+import { Search, Plus, Image as ImageIcon, ChevronLeft, Trash2, Edit, CheckSquare, Square } from 'lucide-react';
 
 const SampleManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('公共数据');
   const [selectedSet, setSelectedSet] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -23,7 +22,6 @@ const SampleManagement: React.FC = () => {
   if (selectedSet) {
     return (
       <div className="h-full bg-gray-50 flex flex-col">
-        {/* 返回栏 */}
         <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => setSelectedSet(null)}
@@ -34,22 +32,15 @@ const SampleManagement: React.FC = () => {
           </button>
         </div>
 
-        {/* 内容区域 */}
         <div className="flex-1 p-4">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-gray-200 rounded" />
-                <span className="text-sm text-gray-600">样本数据</span>
-              </div>
-            </div>
+            <span className="text-sm text-gray-600">样本数据</span>
             <button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm">
               <Plus size={16} />
               <span>新增样本</span>
             </button>
           </div>
 
-          {/* 样本网格 */}
           <div className="grid grid-cols-5 gap-4">
             {samples.map((sample) => (
               <div key={sample.id} className="relative">
@@ -63,7 +54,7 @@ const SampleManagement: React.FC = () => {
                         <Square size={20} className="text-gray-400" />
                       )}
                     </div>
-                    <button className="absolute bottom-2 right-2 p-1 bg-gray-800 bg-opacity-60 rounded text-white hover:bg-opacity-80">
+                    <button className="absolute bottom-2 right-2 p-1 bg-white rounded shadow-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -73,7 +64,6 @@ const SampleManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* 底部分页栏 */}
         <div className="bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-end gap-4">
           <span className="text-sm text-gray-600">共1条</span>
           <div className="flex items-center gap-2">
@@ -94,104 +84,56 @@ const SampleManagement: React.FC = () => {
   }
 
   return (
-    <div className="flex h-full bg-gray-50">
-      {/* 左侧侧边栏 */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        {/* 标签页 */}
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('公共数据')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === '公共数据'
-                ? 'text-blue-600 border-b-2 border-blue-500'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            公共数据
-          </button>
-          <button
-            onClick={() => setActiveTab('我的数据')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === '我的数据'
-                ? 'text-blue-600 border-b-2 border-blue-500'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            我的数据
+    <div className="h-full bg-gray-50 p-4">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 h-full flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+            <input
+              type="text"
+              placeholder="输入样本名称搜索"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm">
+            <Plus size={16} />
+            <span>新增</span>
           </button>
         </div>
 
-        {/* 导航项 */}
-        <div className="flex-1 overflow-y-auto py-2">
-          <div className="px-2">
-            <div className="text-xs font-medium text-purple-600 mb-2 px-2">样本数据</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 右侧内容 */}
-      <div className="flex-1 flex flex-col">
-        {/* 标题栏 */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-800">样本管理</h2>
-        </div>
-
-        <div className="flex-1 p-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              {/* 搜索框 */}
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-                <input
-                  type="text"
-                  placeholder="输入样本名称搜索"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* 新增按钮 */}
-              <button className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm">
-                <Plus size={16} />
-                <span>新增</span>
-              </button>
-            </div>
-
-            {/* 表格 */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-center py-3 text-sm font-medium text-gray-700">样本名称</th>
-                    <th className="text-center py-3 text-sm font-medium text-gray-700">样本数</th>
-                    <th className="text-center py-3 text-sm font-medium text-gray-700">最后更新时间</th>
-                    <th className="text-center py-3 text-sm font-medium text-gray-700">编辑</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSets.map((set) => (
-                    <tr key={set.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="text-center py-3 text-sm text-blue-600 cursor-pointer hover:underline" onClick={() => setSelectedSet(set.name)}>
-                        {set.name}
-                      </td>
-                      <td className="text-center py-3 text-sm text-gray-700">
-                        {set.sampleCount > 0 ? set.sampleCount : '暂无'}
-                      </td>
-                      <td className="text-center py-3 text-sm text-gray-700">{set.date}</td>
-                      <td className="text-center py-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <button className="text-blue-600 hover:text-blue-800 text-sm">重命名</button>
-                          <button className="text-blue-600 hover:text-blue-800 text-sm">编辑</button>
-                          <button className="text-blue-600 hover:text-blue-800 text-sm">删除</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <div className="flex-1">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-center py-3 text-sm font-medium text-gray-700">样本名称</th>
+                <th className="text-center py-3 text-sm font-medium text-gray-700">样本数</th>
+                <th className="text-center py-3 text-sm font-medium text-gray-700">最后更新时间</th>
+                <th className="text-center py-3 text-sm font-medium text-gray-700">编辑</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSets.map((set) => (
+                <tr key={set.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="text-center py-3 text-sm text-blue-600 cursor-pointer hover:underline" onClick={() => setSelectedSet(set.name)}>
+                    {set.name}
+                  </td>
+                  <td className="text-center py-3 text-sm text-gray-700">
+                    {set.sampleCount > 0 ? set.sampleCount : '暂无'}
+                  </td>
+                  <td className="text-center py-3 text-sm text-gray-700">{set.date}</td>
+                  <td className="text-center py-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <button className="text-blue-600 hover:text-blue-800 text-sm">重命名</button>
+                      <button className="text-blue-600 hover:text-blue-800 text-sm">编辑</button>
+                      <button className="text-blue-600 hover:text-blue-800 text-sm">删除</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
