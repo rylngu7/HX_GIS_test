@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite, ListTodo } from 'lucide-react';
+import { ChevronUp, ChevronDown, Box, Layers, Map as MapIcon, Satellite } from 'lucide-react';
 import RemoteSensingModal from './RemoteSensingModal';
 import VideoFusionModal from './VideoFusionModal';
 import ImageFusionModal from './ImageFusionModal';
-import TaskManagementCenter from './TaskManagementCenter';
 
 interface ToolboxProps {
   onExecute?: (toolName: string, params?: any) => void;
@@ -15,7 +14,6 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [videoFusionOpen, setVideoFusionOpen] = useState(false);
   const [imageFusionOpen, setImageFusionOpen] = useState(false);
-  const [taskManagementOpen, setTaskManagementOpen] = useState(false);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -300,12 +298,6 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
 
   return (
     <>
-      {/* 任务管理中心弹窗 */}
-      <TaskManagementCenter
-        isOpen={taskManagementOpen}
-        onClose={() => setTaskManagementOpen(false)}
-      />
-
       <div className="absolute right-4 top-20 z-[60]">
         {/* 弹窗放在工具箱左侧 */}
         {activeModal && (
@@ -340,14 +332,6 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
           </div>
         )}
 
-        {/* 任务管理中心按钮 */}
-        <button
-          onClick={() => setTaskManagementOpen(true)}
-          className="absolute -left-12 top-0 w-10 h-10 bg-blue-600 text-white rounded-l-lg flex items-center justify-center hover:bg-blue-700 shadow-lg"
-        >
-          <ListTodo size={18} />
-        </button>
-        
         <div className="bg-blue-600 text-white px-4 py-2 rounded-t-lg flex items-center justify-between cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
           <span className="font-medium">工具箱</span>
           {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}

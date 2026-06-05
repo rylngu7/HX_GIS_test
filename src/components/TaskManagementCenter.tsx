@@ -282,7 +282,8 @@ const TaskManagementCenter: React.FC<TaskManagementCenterProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'processing' | 'completed' | 'failed'>('all');
 
-  const filteredTasks = tasks.filter(task => {
+  const safeTasks = tasks || [];
+  const filteredTasks = safeTasks.filter(task => {
     if (activeTab === 'all') return true;
     if (activeTab === 'processing') return task.status === 'processing' || task.status === 'pending';
     if (activeTab === 'completed') return task.status === 'completed';
@@ -291,10 +292,10 @@ const TaskManagementCenter: React.FC<TaskManagementCenterProps> = ({
   });
 
   const counts = {
-    all: tasks.length,
-    processing: tasks.filter(t => t.status === 'processing' || t.status === 'pending').length,
-    completed: tasks.filter(t => t.status === 'completed').length,
-    failed: tasks.filter(t => t.status === 'failed').length,
+    all: safeTasks.length,
+    processing: safeTasks.filter(t => t.status === 'processing' || t.status === 'pending').length,
+    completed: safeTasks.filter(t => t.status === 'completed').length,
+    failed: safeTasks.filter(t => t.status === 'failed').length,
   };
 
   if (!isOpen) return null;
