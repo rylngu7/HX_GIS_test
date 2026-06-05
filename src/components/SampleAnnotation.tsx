@@ -30,28 +30,42 @@ const SampleAnnotation: React.FC = () => {
   if (selectedSample) {
     return (
       <div className="flex h-full bg-gray-50">
-        {/* 主内容区 - 待标注图层占据大部分 */}
-        <div className="flex-1 flex flex-col bg-white">
-          {/* 顶部返回栏 */}
-          <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-            >
-              <ChevronLeft size={20} />
-              <span className="text-lg font-semibold">样本列表</span>
-            </button>
-          </div>
-
-          {/* 图像显示区域 */}
-          <div className="flex-1 bg-gray-50">
-            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <ImageIcon size={120} className="text-gray-400" />
+        {/* 左侧：选中的样本卡片 */}
+        <div className="w-72 bg-white border-r border-gray-200 flex flex-col p-4">
+          <button
+            onClick={handleCancel}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
+          >
+            <ChevronLeft size={20} />
+            <span className="font-medium">样本列表</span>
+          </button>
+          
+          {/* 选中的样本卡片 */}
+          <div className="bg-white border-2 border-blue-500 rounded-lg p-3">
+            <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-purple-100 rounded mb-2 flex items-center justify-center">
+              <ImageIcon size={48} className="text-blue-400" />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-800">{selectedSample.name}</span>
+              <MoreVertical size={16} className="text-gray-400" />
+            </div>
+            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+              <span>📅</span>
+              <span>{selectedSample.date}</span>
             </div>
           </div>
         </div>
 
-        {/* 标注操作栏放到右侧 */}
+        {/* 中央：标注区域 */}
+        <div className="flex-1 flex flex-col bg-white">
+          <div className="flex-1 bg-gray-100 flex items-center justify-center p-8">
+            <div className="w-full h-full bg-white border border-gray-200 rounded-lg flex items-center justify-center">
+              <ImageIcon size={160} className="text-gray-300" />
+            </div>
+          </div>
+        </div>
+
+        {/* 右侧：标注操作栏 */}
         <div className="w-72 bg-white border-l border-gray-200 flex flex-col">
           <div className="p-4 border-b border-gray-200">
             <h3 className="font-medium text-gray-800 mb-3">样本标注 - {selectedSample.name}</h3>

@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
-import { Search, Plus, Image as ImageIcon, ChevronLeft, Trash2, Edit, CheckSquare, Square } from 'lucide-react';
+import { Search, Plus, Image as ImageIcon, ChevronLeft, Trash2, Edit, CheckSquare, Square, X } from 'lucide-react';
+
+interface SampleSet {
+  id: string;
+  name: string;
+  sampleCount: number;
+  date: string;
+}
 
 const SampleManagement: React.FC = () => {
   const [selectedSet, setSelectedSet] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const sampleSets = [
+  const [sampleSets, setSampleSets] = useState<SampleSet[]>([
     { id: '1', name: 'test11', sampleCount: 1, date: '2026-06-04 14:46:49' },
     { id: '2', name: '1', sampleCount: 0, date: '2026-06-01 16:03:35' },
     { id: '3', name: 'bailian', sampleCount: 0, date: '2025-12-24 14:25:16' }
-  ];
+  ]);
+  
+  // 弹窗状态
+  const [renameModal, setRenameModal] = useState<{ open: boolean; set: SampleSet } | null>(null);
+  const [editModal, setEditModal] = useState<{ open: boolean; set: SampleSet } | null>(null);
+  const [tempName, setTempName] = useState('');
 
   const filteredSets = sampleSets.filter(set => 
     set.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -18,6 +29,30 @@ const SampleManagement: React.FC = () => {
   const samples = [
     { id: '1', name: 'sample1.jpg', selected: true }
   ];
+
+  // 处理重命名
+  const handleRename = () => {
+    if (renameModal && tempName.trim()) {
+      const newSets = sampleSets.map(set => 
+        set.id === renameModal.set.id ? { ...set, name: tempName } : set
+      );
+      setSampleSets(newSets);
+      setRenameModal(null);
+      setTempName('');
+    }
+  };
+
+  // 处理编辑
+  const handleEdit = () => {
+    if (editModal && tempName.trim()) {
+      const newSets = sampleSets.map(set => 
+        set.id === editModal.set.id ? { ...set, name: tempName } : set
+      );
+      setSampleSets(newSets);
+      setEditModal(null);
+      setTempName('');
+    }
+  };
 
   if (selectedSet) {
     return (
@@ -125,8 +160,26 @@ const SampleManagement: React.FC = () => {
                   <td className="text-center py-3 text-sm text-gray-700">{set.date}</td>
                   <td className="text-center py-3">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="text-blue-600 hover:text-blue-800 text-sm">重命名</button>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm">编辑</button>
+                      <button 
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTempName(set.name);
+                          setRenameModal({ open: true, set });
+                        }}
+                      >
+                        重命名
+                      </button>
+                      <button 
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTempName(set.name);
+                          setEditModal({ open: true, set });
+                        }}
+                      >
+                        编辑
+                      </button>
                       <button className="text-blue-600 hover:text-blue-800 text-sm">删除</button>
                     </div>
                   </td>
@@ -136,6 +189,97 @@ const SampleManagement: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* 重命名弹窗 */}
+      {renameModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-800">重命名样本集</h3>
+              <button
+                onClick={() => {
+                  setRenameModal(null);
+                  setTempName('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              placeholder="输入新名称"
+              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setRenameModal(null);
+                  setTempName('');
+                }}
+                className="px-4 py-2 text-blue-600 border border-blue-600 rounded text-sm hover:bg-blue-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleRename}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑弹窗 */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[500px] shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-800">编辑样本集</h3>
+              <button
+                onClick={() => {
+                  setEditModal(null);
+                  setTempName('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">样本集名称</label>
+              <input
+                type="text"
+                value={tempName}
+                onChange={(e) => setTempName(e.target.value)}
+                placeholder="输入样本集名称"
+                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setEditModal(null);
+                  setTempName('');
+                }}
+                className="px-4 py-2 text-blue-600 border border-blue-600 rounded text-sm hover:bg-blue-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleEdit}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
