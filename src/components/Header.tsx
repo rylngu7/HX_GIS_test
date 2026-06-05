@@ -1,8 +1,12 @@
-
 import React from 'react';
-import { Bell, Plane, User } from 'lucide-react';
+import { Bell, Plane, User, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onToggleTaskCenter: () => void;
+  hasTasks: boolean;
+}
+
+const Header: React.FC<HeaderProps> = ({ onToggleTaskCenter, hasTasks }) => {
   return (
     <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white h-14 flex items-center px-6 justify-between">
       <div className="flex items-center gap-8">
@@ -21,6 +25,17 @@ const Header: React.FC = () => {
         </button>
         <Plane size={20} />
         <Bell size={20} />
+        <button
+          onClick={onToggleTaskCenter}
+          className={`relative p-2 rounded hover:bg-white/20 transition-colors ${hasTasks ? 'bg-white/10' : ''}`}
+        >
+          <Clock size={20} />
+          {hasTasks && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+              ●
+            </span>
+          )}
+        </button>
         <User size={20} />
       </div>
     </header>

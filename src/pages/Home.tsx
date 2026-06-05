@@ -3,7 +3,8 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import MapView from '../components/MapView';
 import Toolbox from '../components/Toolbox';
-import TaskList, { useTaskManager, useTaskSimulation } from '../components/TaskList';
+import TaskManagementCenter from '../components/TaskManagementCenter';
+import { useTaskManager, useTaskSimulation } from '../components/TaskList';
 import ExportModal from '../components/ExportModal';
 import UploadFileModal from '../components/UploadFileModal';
 
@@ -14,6 +15,7 @@ export default function Home() {
   const [exportDataType, setExportDataType] = useState<"vector" | "image" | "3d">('vector');
   const [videoFusionActive, setVideoFusionActive] = useState(false);
   const [videoParams, setVideoParams] = useState<any>(null);
+  const [taskCenterOpen, setTaskCenterOpen] = useState(false);
 
   const { tasks, addTask, updateTaskProgress, closeTask, clearCompleted } = useTaskManager();
   const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
@@ -26,6 +28,8 @@ export default function Home() {
     } else if (toolName !== '视频融合') {
       startTask(toolName);
     }
+    // 打开任务管理中心
+    setTaskCenterOpen(true);
   };
 
   const handleExportClick = (dataType) => {
@@ -46,9 +50,13 @@ export default function Home() {
     setVideoParams(null);
   };
 
+  const handleToggleTaskCenter = () => {
+    setTaskCenterOpen(!taskCenterOpen);
+  };
+
   return (
     <div className="h-screen flex flex-col">
-      <Header />
+      <Header onToggleTaskCenter={handleToggleTaskCenter} hasTasks={tasks.length > 0} />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           onExportClick={handleExportClick}
@@ -66,8 +74,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 任务列表 */}
-      <TaskList
+      {/* 任务管理中心 */}
+      <TaskManagementCenter
+        isOpen={taskCenterOpen}
+        onClose={() => setTaskCenterOpen(false)}
         tasks={tasks}
         onCloseTask={closeTask}
         onClearCompleted={clearCompleted}

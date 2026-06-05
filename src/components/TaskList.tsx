@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { X, CheckCircle, Clock, ChevronDown, ChevronUp, Trash2, Layers, Download, FolderOpen, Box, Folder, Plus, Check } from 'lucide-react';
+import { X, CheckCircle, Clock, ChevronDown, ChevronUp, Trash2, Layers, Download, FolderOpen, Box, Folder, Plus, Check, AlertCircle } from 'lucide-react';
 
 export interface Task {
   id: string;
   name: string;
   progress: number;
-  isComplete: boolean;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   createdAt: number;
+  error?: string;
 }
 
 interface TaskListProps {
@@ -245,15 +246,43 @@ const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose
     setShowSaveModal(true);
   };
 
+  const getStatusIcon = () => {
+    switch (task.status) {
+      case 'completed':
+        return <CheckCircle size={24} className="text-green-500" />;
+      case 'failed':
+        return <AlertCircle size={24} className="text-red-500" />;
+      case 'processing':
+      case 'pending':
+      default:
+        return <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (task.status) {
+      case 'completed':
+        return '已完成';
+      case 'failed':
+        return '执行失败';
+      case 'processing':
+        return `${Math.round(progressPercentage)}%`;
+      case 'pending':
+        return '等待中';
+      default:
+        return '';
+    }
+  };
+
   return (
     <>
-      <div className="flex items-start gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className={`flex items-start gap-3 p-3 rounded-lg shadow-sm border ${
+        task.status === 'failed' ? 'bg-red-50 border-red-200' : 
+        task.status === 'completed' ? 'bg-green-50 border-green-200' : 
+        'bg-white border-gray-200'
+      }`}>
         <div className="flex-shrink-0">
-          {task.isComplete ? (
-            <CheckCircle size={24} className="text-green-500" />
-          ) : (
-            <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-          )}
+          {getStatusIcon()}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
@@ -266,23 +295,32 @@ const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose
             </button>
           </div>
           <div className="mt-2">
-            <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ${
-                  task.isComplete ? 'bg-green-500' : 'bg-blue-600'
-                }`}
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
+            {task.status === 'processing' && (
+              <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-full bg-blue-600 transition-all duration-300"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            )}
             <div className="flex items-center justify-between mt-1">
-              <span className="text-xs text-gray-500">
-                {task.isComplete ? '已完成' : `${Math.round(progressPercentage)}%`}
+              <span className={`text-xs ${
+                task.status === 'failed' ? 'text-red-500' : 
+                task.status === 'completed' ? 'text-green-500' : 
+                'text-gray-500'
+              }`}>
+                {getStatusText()}
               </span>
               <span className="text-xs text-gray-400">
                 {new Date(task.createdAt).toLocaleTimeString()}
               </span>
             </div>
-            {task.isComplete && (
+            {task.error && (
+              <div className="mt-2 p-2 bg-red-100 text-red-700 text-xs rounded">
+                {task.error}
+              </div>
+            )}
+            {task.status === 'completed' && (
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleExportToLayer}
@@ -321,8 +359,10 @@ const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearCompleted }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const completedTasks = tasks.filter(t => t.isComplete);
-  const activeTasks = tasks.filter(t => !t.isComplete);
+  const completedTasks = tasks.filter(t => t.status === 'completed');
+  const failedTasks = tasks.filter(t => t.status === 'failed');
+  const processingTasks = tasks.filter(t => t.status === 'processing' || t.status === 'pending');
+  const activeTasks = [...processingTasks, ...failedTasks];
 
   if (tasks.length === 0) return null;
 
@@ -336,11 +376,11 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearComplete
           <div className="flex items-center gap-2">
             <Clock size={18} className="text-gray-600" />
             <span className="text-sm font-medium text-gray-800">
-              任务 ({activeTasks.length}/{tasks.length})
+              任务 ({processingTasks.length}/{tasks.length})
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {completedTasks.length > 0 && (
+            {(completedTasks.length > 0 || failedTasks.length > 0) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -362,9 +402,26 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearComplete
 
         {isExpanded && (
           <div className="p-2 space-y-2 max-h-80 overflow-y-auto border-t border-gray-100">
-            {activeTasks.length > 0 && (
+            {processingTasks.length > 0 && (
               <div className="space-y-2">
-                {activeTasks.map(task => (
+                {processingTasks.map(task => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onClose={() => onCloseTask(task.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {failedTasks.length > 0 && (
+              <div className="space-y-2">
+                {(processingTasks.length > 0) && (
+                  <div className="text-xs text-gray-400 px-1 pt-1">
+                    失败
+                  </div>
+                )}
+                {failedTasks.map(task => (
                   <TaskItem
                     key={task.id}
                     task={task}
@@ -376,7 +433,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearComplete
 
             {completedTasks.length > 0 && (
               <div className="space-y-2">
-                {activeTasks.length > 0 && (
+                {(processingTasks.length > 0 || failedTasks.length > 0) && (
                   <div className="text-xs text-gray-400 px-1 pt-1">
                     已完成
                   </div>
@@ -406,7 +463,7 @@ export const useTaskManager = () => {
       id,
       name: taskName,
       progress: 0,
-      isComplete: false,
+      status: 'processing',
       createdAt: Date.now(),
     };
     setTasks(prev => [...prev, newTask]);
@@ -417,7 +474,21 @@ export const useTaskManager = () => {
     setTasks(prev =>
       prev.map(task =>
         task.id === taskId
-          ? { ...task, progress, isComplete: progress >= 100 }
+          ? { 
+              ...task, 
+              progress, 
+              status: progress >= 100 ? 'completed' : 'processing' 
+            }
+          : task
+      )
+    );
+  }, []);
+
+  const updateTaskStatus = useCallback((taskId: string, status: Task['status'], error?: string) => {
+    setTasks(prev =>
+      prev.map(task =>
+        task.id === taskId
+          ? { ...task, status, error }
           : task
       )
     );
@@ -428,13 +499,14 @@ export const useTaskManager = () => {
   }, []);
 
   const clearCompleted = useCallback(() => {
-    setTasks(prev => prev.filter(task => !task.isComplete));
+    setTasks(prev => prev.filter(task => task.status !== 'completed' && task.status !== 'failed'));
   }, []);
 
   return {
     tasks,
     addTask,
     updateTaskProgress,
+    updateTaskStatus,
     closeTask,
     clearCompleted,
   };
