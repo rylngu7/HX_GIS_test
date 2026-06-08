@@ -24,6 +24,32 @@ export default function Home() {
   const { tasks, addTask, updateTaskProgress, updateTaskStatus, closeTask, clearCompleted } = useTaskManager();
   const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    else if (bytes < 1048576) return `${(bytes / 1024).toFixed(2)} KB`;
+    else return `${(bytes / 1048576).toFixed(2)} MB`;
+  };
+
+  const simulateUploadProgress = (taskId: string) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15 + 5;
+      if (progress >= 100) {
+        updateTaskProgress(taskId, 100);
+        clearInterval(interval);
+      } else {
+        updateTaskProgress(taskId, progress);
+      }
+    }, 300);
+  };
+
+  const handleUploadFile = (file: File) => {
+    const fileSize = formatFileSize(file.size);
+    const taskId = addTask(`上传文件: ${file.name}`, fileSize);
+    setTaskCenterOpen(true);
+    simulateUploadProgress(taskId);
+  };
+
   const handleExecute = (toolName: string, params?: any) => {
     if (toolName === '视频融合' && params) {
       setVideoParams(params);
@@ -147,6 +173,7 @@ export default function Home() {
         <UploadFileModal
           isOpen={uploadModalOpen}
           onClose={() => setUploadModalOpen(false)}
+          onUploadFile={handleUploadFile}
         />
       )}
     </div>

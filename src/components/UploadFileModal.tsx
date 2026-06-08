@@ -1,8 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { X, Upload, Map, Box, Image, FileText } from 'lucide-react';
 
-export default function UploadFileModal(props) {
-  const { isOpen, onClose } = props;
+interface UploadFileModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUploadFile?: (file: File) => void;
+}
+
+export default function UploadFileModal({ isOpen, onClose, onUploadFile }: UploadFileModalProps) {
   const [dataName, setDataName] = useState('');
   const [selectedDataType, setSelectedDataType] = useState('vector');
   const [description, setDescription] = useState('');
@@ -88,6 +93,9 @@ export default function UploadFileModal(props) {
       checkProjection,
       file: selectedFile
     });
+    if (selectedFile && onUploadFile) {
+      onUploadFile(selectedFile);
+    }
     onClose();
   };
 

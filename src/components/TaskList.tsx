@@ -8,6 +8,7 @@ export interface Task {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   createdAt: number;
   error?: string;
+  fileSize?: string;
 }
 
 interface TaskListProps {
@@ -311,9 +312,16 @@ const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose
               }`}>
                 {getStatusText()}
               </span>
-              <span className="text-xs text-gray-400">
-                {new Date(task.createdAt).toLocaleTimeString()}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">
+                  {new Date(task.createdAt).toLocaleTimeString()}
+                </span>
+                {task.fileSize && (
+                  <span className="text-xs text-gray-400">
+                    {task.fileSize}
+                  </span>
+                )}
+              </div>
             </div>
             {task.error && (
               <div className="mt-2 p-2 bg-red-100 text-red-700 text-xs rounded">
@@ -457,7 +465,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearComplete
 export const useTaskManager = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const addTask = useCallback((taskName: string): string => {
+  const addTask = useCallback((taskName: string, fileSize?: string): string => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const newTask: Task = {
       id,
@@ -465,6 +473,7 @@ export const useTaskManager = () => {
       progress: 0,
       status: 'processing',
       createdAt: Date.now(),
+      fileSize,
     };
     setTasks(prev => [...prev, newTask]);
     return id;

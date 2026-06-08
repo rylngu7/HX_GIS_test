@@ -4,7 +4,7 @@ import { ChevronDown, Info } from 'lucide-react';
 interface ImageFusionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onExecute?: (params: any) => void;
+  onExecute?: (toolName: string, params?: any) => void;
 }
 
 const generateRandomId = () => Math.random().toString(36).substring(2, 8).toUpperCase();
