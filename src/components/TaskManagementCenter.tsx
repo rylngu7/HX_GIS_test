@@ -172,25 +172,25 @@ const TaskItemInCenter: React.FC<{
     switch (task.status) {
       case 'completed':
         return (
-          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded whitespace-nowrap">
             已完成
           </span>
         );
       case 'failed':
         return (
-          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
+          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded whitespace-nowrap">
             处理失败
           </span>
         );
       case 'processing':
         return (
-          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded whitespace-nowrap">
             处理中
           </span>
         );
       case 'pending':
         return (
-          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded whitespace-nowrap">
             等待中
           </span>
         );
@@ -208,7 +208,7 @@ const TaskItemInCenter: React.FC<{
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               {getStatusIcon()}
-              <h4 className="font-medium text-gray-800 truncate text-sm">{task.name}</h4>
+              <h4 className="font-medium text-gray-800 truncate text-sm flex-1">{task.name}</h4>
               {getStatusBadge()}
             </div>
             <div className="text-xs text-gray-500 flex items-center gap-4 mt-1">
@@ -302,7 +302,7 @@ const TaskManagementCenter: React.FC<TaskManagementCenterProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-14 right-[60px] z-[150]">
+    <div className="fixed bottom-[88px] right-4 z-[150]">
       <div className="bg-white rounded-lg shadow-2xl w-[480px] max-h-[70vh] overflow-hidden border border-gray-200">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center gap-2">
