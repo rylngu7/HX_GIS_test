@@ -24,7 +24,11 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   const [fusionAlgorithm, setFusionAlgorithm] = useState('Brovey');
   const [baseImage, setBaseImage] = useState('');
   const [correctionImage, setCorrectionImage] = useState('');
-  const [controlPoints, setControlPoints] = useState<Array<{id: number, x: number, y: number}>>([]);
+  const [controlPoints, setControlPoints] = useState<Array<{id: number, baseLng: number, baseLat: number, correctionLng: number, correctionLat: number}>>([
+    { id: 1, baseLng: 113.321546, baseLat: 23.135245, correctionLng: 113.322012, correctionLat: 23.134876 },
+    { id: 2, baseLng: 113.325123, baseLat: 23.140876, correctionLng: 113.325768, correctionLat: 23.140456 },
+    { id: 3, baseLng: 113.318765, baseLat: 23.128543, correctionLng: 113.319234, correctionLat: 23.128112 },
+  ]);
   const [colorSpace, setColorSpace] = useState('RGB');
   const [baseData, setBaseData] = useState('');
   const [baseR, setBaseR] = useState('');
@@ -758,17 +762,88 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
           </label>
           <button className="text-blue-600 text-sm underline">自动配准</button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-3">
           <button
-            onClick={() => setControlPoints([...controlPoints, {id: Date.now(), x: 0, y: 0}])}
+            onClick={() => setControlPoints([...controlPoints, {id: Date.now(), baseLng: 0, baseLat: 0, correctionLng: 0, correctionLat: 0}])}
             className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 flex-1"
           >
             <Plus size={14} />
             新增控制点
           </button>
-          <button className="p-2 border border-gray-300 rounded hover:bg-gray-50">
+          <button
+            onClick={() => setControlPoints(controlPoints.slice(0, -1))}
+            disabled={controlPoints.length === 0}
+            className="p-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Trash2 size={14} />
           </button>
+        </div>
+
+        {/* 控制点经纬度显示区域 */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="grid grid-cols-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-700">
+            <div className="px-3 py-2 text-center border-r border-gray-200">
+              基准影像控制点
+            </div>
+            <div className="px-3 py-2 text-center">
+              校准影像控制点
+            </div>
+          </div>
+
+          {/* 表头 */}
+          <div className="grid grid-cols-2 border-b border-gray-200 bg-gray-50 text-xs text-gray-500">
+            <div className="grid grid-cols-2 border-r border-gray-200">
+              <div className="px-2 py-1.5 text-center">经度</div>
+              <div className="px-2 py-1.5 text-center border-l border-gray-200">纬度</div>
+            </div>
+            <div className="grid grid-cols-2">
+              <div className="px-2 py-1.5 text-center">经度</div>
+              <div className="px-2 py-1.5 text-center border-l border-gray-200">纬度</div>
+            </div>
+          </div>
+
+          {/* 控制点列表 */}
+          <div className="max-h-[180px] overflow-y-auto">
+            {controlPoints.length === 0 ? (
+              <div className="px-3 py-6 text-center text-gray-400 text-xs">
+                暂未添加控制点
+              </div>
+            ) : (
+              controlPoints.map((point, index) => (
+                <div
+                  key={point.id}
+                  className={`grid grid-cols-2 text-xs ${
+                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                  } ${index !== controlPoints.length - 1 ? 'border-b border-gray-100' : ''}`}
+                >
+                  <div className="grid grid-cols-2 border-r border-gray-200">
+                    <div className="px-2 py-1.5 text-center text-gray-700 font-mono">
+                      {point.baseLng.toFixed(6)}
+                    </div>
+                    <div className="px-2 py-1.5 text-center text-gray-700 font-mono border-l border-gray-200">
+                      {point.baseLat.toFixed(6)}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2">
+                    <div className="px-2 py-1.5 text-center text-gray-700 font-mono">
+                      {point.correctionLng.toFixed(6)}
+                    </div>
+                    <div className="px-2 py-1.5 text-center text-gray-700 font-mono border-l border-gray-200">
+                      {point.correctionLat.toFixed(6)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* 统计信息 */}
+          <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex items-center justify-between">
+            <span>已选择 {controlPoints.length} 对控制点</span>
+            {controlPoints.length >= 3 && (
+              <span className="text-green-600">✓ 满足最小配准要求</span>
+            )}
+          </div>
         </div>
       </div>
     </div>
