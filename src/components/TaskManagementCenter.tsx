@@ -231,7 +231,7 @@ const TaskItemInCenter: React.FC<{
                 {task.error}
               </div>
             )}
-            {task.status === 'completed' && (
+            {task.status === 'completed' && !task.name.startsWith('上传文件') && (
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleExportToLayer}
