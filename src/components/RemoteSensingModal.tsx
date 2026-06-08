@@ -818,18 +818,18 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
                 >
                   <div className="grid grid-cols-2 border-r border-gray-200">
                     <div className="px-2 py-1.5 text-center text-gray-700 font-mono">
-                      {point.baseLng.toFixed(6)}
+                      {point.baseLng.toFixed(2)}
                     </div>
                     <div className="px-2 py-1.5 text-center text-gray-700 font-mono border-l border-gray-200">
-                      {point.baseLat.toFixed(6)}
+                      {point.baseLat.toFixed(2)}
                     </div>
                   </div>
                   <div className="grid grid-cols-2">
                     <div className="px-2 py-1.5 text-center text-gray-700 font-mono">
-                      {point.correctionLng.toFixed(6)}
+                      {point.correctionLng.toFixed(2)}
                     </div>
                     <div className="px-2 py-1.5 text-center text-gray-700 font-mono border-l border-gray-200">
-                      {point.correctionLat.toFixed(6)}
+                      {point.correctionLat.toFixed(2)}
                     </div>
                   </div>
                 </div>
