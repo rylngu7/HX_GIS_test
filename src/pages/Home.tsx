@@ -21,7 +21,7 @@ export default function Home() {
   const [toolboxOpen, setToolboxOpen] = useState(false);
   const [activeNav, setActiveNav] = useState('数据管理');
 
-  const { tasks, addTask, updateTaskProgress, closeTask, clearCompleted } = useTaskManager();
+  const { tasks, addTask, updateTaskProgress, updateTaskStatus, closeTask, clearCompleted } = useTaskManager();
   const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
 
   const handleExecute = (toolName: string, params?: any) => {
@@ -29,8 +29,15 @@ export default function Home() {
       setVideoParams(params);
       setVideoFusionActive(true);
     }
-    startTask(toolName);
-    setTaskCenterOpen(true);
+    if (params?.success === false) {
+      // 处理失败任务
+      const taskId = addTask(toolName);
+      updateTaskStatus(taskId, 'failed', params.error);
+      setTaskCenterOpen(true);
+    } else {
+      startTask(toolName);
+      setTaskCenterOpen(true);
+    }
   };
 
   const handleExportClick = (dataType: "vector" | "image" | "3d") => {

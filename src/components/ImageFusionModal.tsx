@@ -29,11 +29,15 @@ const ImageFusionModal: React.FC<ImageFusionModalProps> = ({ isOpen, onClose, on
     const sameRegion = panNumber === msNumber;
 
     if (!sameRegion) {
-      alert('执行失败：全色影像和多光谱影像区域不一致！');
+      onExecute?.('影像融合', {
+        success: false,
+        error: '全色影像和多光谱影像区域不一致！'
+      });
+      onClose();
       return;
     }
 
-    onExecute?.({
+    onExecute?.('影像融合', {
       resultName,
       panLayer,
       msLayer,

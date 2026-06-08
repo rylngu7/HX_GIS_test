@@ -327,7 +327,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onExecute }) => {
             <ImageFusionModal
               isOpen={imageFusionOpen}
               onClose={() => setImageFusionOpen(false)}
-              onExecute={(params) => onExecute?.('影像融合', params)}
+              onExecute={onExecute}
             />
           </div>
         )}
