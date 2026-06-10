@@ -44,8 +44,10 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
   const [preprocessAutoCorrect, setPreprocessAutoCorrect] = useState(false);
   const [preprocessCorrectionValue, setPreprocessCorrectionValue] = useState('0.15');
   const [mosaicLayers, setMosaicLayers] = useState<string[]>([]);
+  const [mosaicBandsByLayer, setMosaicBandsByLayer] = useState<{ [key: string]: string[] }>({});
+  const [mosaicExpandedLayers, setMosaicExpandedLayers] = useState<string[]>([]);
   const [isMosaicDropdownOpen, setIsMosaicDropdownOpen] = useState(false);
-  const availableMosaicLayers = ['影像1.tif', '影像2.tif', '影像3.tif'];
+  const availableMosaicLayers = ['基准图.tif', '矫正图.tif', '预处理流程-TT8Y9713428358001'];
   const [isBandCompositeDropdownOpen, setIsBandCompositeDropdownOpen] = useState(false);
   const [selectedCompositeLayers, setSelectedCompositeLayers] = useState<string[]>([]);
   const [selectedBandsByLayer, setSelectedBandsByLayer] = useState<{ [key: string]: string[] }>({});
@@ -104,6 +106,33 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
         ? prev.filter(l => l !== layer) 
         : [...prev, layer]
     );
+  };
+
+  const toggleMosaicLayerExpand = (layer: string) => {
+    setMosaicExpandedLayers(prev => 
+      prev.includes(layer) 
+        ? prev.filter(l => l !== layer) 
+        : [...prev, layer]
+    );
+  };
+
+  const toggleMosaicBand = (layer: string, band: string) => {
+    setMosaicBandsByLayer(prev => {
+      const currentBands = prev[layer] || [];
+      const newBands = currentBands.includes(band) 
+        ? currentBands.filter(b => b !== band) 
+        : [...currentBands, band];
+      return { ...prev, [layer]: newBands };
+    });
+  };
+
+  const removeMosaicLayer = (layer: string) => {
+    setMosaicLayers(prev => prev.filter(l => l !== layer));
+    setMosaicBandsByLayer(prev => {
+      const newObj = { ...prev };
+      delete newObj[layer];
+      return newObj;
+    });
   };
 
   const toggleLayerExpand = (layer: string) => {
@@ -1080,44 +1109,91 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             className="w-full px-3 py-2 border border-blue-500 rounded bg-white text-left flex items-center justify-between"
           >
             <span>{mosaicLayers.length > 0 ? `已选择 ${mosaicLayers.length} 项` : ''}</span>
-            <ChevronDown 
-              size={16} 
-            />
+            <ChevronDown size={16} />
           </button>
-          
+
           {isMosaicDropdownOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
               {availableMosaicLayers.map(layer => (
-                <div 
-                  key={layer}
-                  className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between ${mosaicLayers.includes(layer) ? 'bg-blue-50' : ''}`}
-                  onClick={() => toggleMosaicLayer(layer)}
-                >
-                  <span>{layer}</span>
-                  {mosaicLayers.includes(layer) && (
-                    <span className="text-blue-600">✓</span>
+                <div key={layer}>
+                  <div
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2 ${mosaicLayers.includes(layer) ? 'bg-blue-50' : ''}`}
+                    onClick={() => {
+                      toggleMosaicLayer(layer);
+                      if (!mosaicExpandedLayers.includes(layer)) {
+                        toggleMosaicLayerExpand(layer);
+                      }
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={mosaicLayers.includes(layer)}
+                      className="w-4 h-4"
+                      readOnly
+                    />
+                    <span className="text-sm flex-1">{layer}</span>
+                    {(layerBands[layer]?.length || 0) > 0 && (
+                      <ChevronDown
+                        size={14}
+                        className={`text-gray-500 transition-transform ${mosaicExpandedLayers.includes(layer) ? 'rotate-180' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMosaicLayerExpand(layer);
+                        }}
+                      />
+                    )}
+                  </div>
+                  {(layerBands[layer]?.length || 0) > 0 && mosaicExpandedLayers.includes(layer) && (
+                    <div className="pl-10 pr-3 pb-2 space-y-1">
+                      {layerBands[layer].map(band => (
+                        <div
+                          key={band}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleMosaicBand(layer, band);
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={(mosaicBandsByLayer[layer] || []).includes(band)}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">{band}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}
             </div>
           )}
         </div>
-        
+
+        {/* 显示选中的图层和波段 */}
         {mosaicLayers.length > 0 && (
           <div className="mt-2 space-y-1">
             {mosaicLayers.map(layer => (
-              <div 
-                key={layer}
-                className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded"
-              >
-                <span className="text-sm">{layer}</span>
-                <button
-                  type="button"
-                  onClick={() => toggleMosaicLayer(layer)}
-                  className="text-blue-500 hover:text-blue-700 ml-2"
-                >
-                  ✕
-                </button>
+              <div key={layer} className="space-y-1">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded">
+                  <span className="text-sm">{layer}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeMosaicLayer(layer)}
+                    className="text-blue-500 hover:text-blue-700 ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {(mosaicBandsByLayer[layer] || []).length > 0 && (
+                  <div className="pl-4 space-y-0.5">
+                    {(mosaicBandsByLayer[layer] || []).map(band => (
+                      <div key={band} className="text-xs text-gray-600 px-2 py-0.5 bg-gray-100 rounded">
+                        {band}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
