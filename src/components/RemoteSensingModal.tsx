@@ -92,7 +92,24 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
         return;
       }
     }
-    
+
+    // 如果是影像镶嵌，需要验证图层和波段条件
+    if (toolName === '影像镶嵌') {
+      if (mosaicLayers.length < 2) {
+        alert('执行失败：至少需选择 2 个图层！');
+        return;
+      }
+      const bandCounts = mosaicLayers.map(layer => (mosaicBandsByLayer[layer] || []).length);
+      if (bandCounts.some(count => count === 0)) {
+        alert('执行失败：每个图层需至少选择 1 个波段！');
+        return;
+      }
+      if (!bandCounts.every(count => count === bandCounts[0])) {
+        alert('执行失败：多个图层选择的波段数量必须相等！');
+        return;
+      }
+    }
+
     if (onExecute) {
       onExecute(toolName);
     }
@@ -1176,7 +1193,12 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             {mosaicLayers.map(layer => (
               <div key={layer} className="space-y-1">
                 <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded">
-                  <span className="text-sm">{layer}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{layer}</span>
+                    <span className="text-xs text-gray-500">
+                      {(mosaicBandsByLayer[layer] || []).length} 个波段
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeMosaicLayer(layer)}
@@ -1198,6 +1220,38 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
             ))}
           </div>
         )}
+
+        {/* 验证提示 */}
+        <div className="mt-2 space-y-1">
+          {mosaicLayers.length > 0 && mosaicLayers.length < 2 && (
+            <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+              <span>⚠</span>
+              <span>至少需选择 2 个图层</span>
+            </div>
+          )}
+          {mosaicLayers.length >= 2 && (() => {
+            const bandCounts = mosaicLayers.map(layer => (mosaicBandsByLayer[layer] || []).length);
+            const allHaveBands = bandCounts.every(count => count > 0);
+            const countsEqual = bandCounts.length > 0 && bandCounts.every(count => count === bandCounts[0]);
+            if (!allHaveBands) {
+              return (
+                <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+                  <span>⚠</span>
+                  <span>每个图层需至少选择 1 个波段</span>
+                </div>
+              );
+            }
+            if (!countsEqual) {
+              return (
+                <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+                  <span>⚠</span>
+                  <span>多个图层选择的波段数量必须相等</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </div>
       </div>
 
       <div>
@@ -1348,15 +1402,30 @@ const RemoteSensingModal: React.FC<RemoteSensingModalProps> = ({
 
         {renderContent()}
 
-        <div className="px-4 py-3 bg-blue-600 rounded-b-lg flex justify-center">
-          <button
-            onClick={handleExecute}
-            disabled={toolName === '影像融合' && (!panLayer || !msLayer)}
-            className="px-8 py-2 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            开始执行
-          </button>
-        </div>
+        {(() => {
+          let isMosaicValid = true;
+          if (toolName === '影像镶嵌') {
+            if (mosaicLayers.length < 2) {
+              isMosaicValid = false;
+            } else {
+              const bandCounts = mosaicLayers.map(layer => (mosaicBandsByLayer[layer] || []).length);
+              isMosaicValid = bandCounts.every(count => count > 0) && bandCounts.every(count => count === bandCounts[0]);
+            }
+          }
+          const isDisabled = (toolName === '影像融合' && (!panLayer || !msLayer)) || (toolName === '影像镶嵌' && !isMosaicValid);
+
+          return (
+            <div className="px-4 py-3 bg-blue-600 rounded-b-lg flex justify-center">
+              <button
+                onClick={handleExecute}
+                disabled={isDisabled}
+                className="px-8 py-2 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                开始执行
+              </button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
