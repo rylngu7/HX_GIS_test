@@ -47,10 +47,9 @@ const validateFileByType = (file: File, dataType: string): string | null => {
 };
 
 const UPLOAD_STAGES = [
-  { key: 'uploading',  label: '正在上传文件到服务器',      progressRange: [0, 25] },
-  { key: 'validating', label: '后端格式与质量校验中',     progressRange: [25, 60], failRate: 0.15 },
-  { key: 'parsing',    label: '正在解析数据内容',         progressRange: [60, 85], failRate: 0.05 },
-  { key: 'storing',    label: '写入数据目录',              progressRange: [85, 100], failRate: 0.03 },
+  { key: 'uploading',  label: '正在上传文件到服务器',      progressRange: [0, 30] },
+  { key: 'validating', label: '后端格式与质量校验中',     progressRange: [30, 70], failRate: 0.15 },
+  { key: 'parsing',    label: '正在解析数据内容',         progressRange: [70, 100], failRate: 0.05 },
 ];
 
 export default function UploadFileModal({ isOpen, onClose, onUploadFile }: UploadFileModalProps) {
