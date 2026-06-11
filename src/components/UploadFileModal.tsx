@@ -52,6 +52,8 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   const [checkProjection, setCheckProjection] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [formatError, setFormatError] = useState('');
+  const [userTouchedName, setUserTouchedName] = useState(false);
 
   // Processing states
   const [processing, setProcessing] = useState(false);
@@ -60,24 +62,16 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   const [uploadDone, setUploadDone] = useState(false);
   const [uploadFailed, setUploadFailed] = useState('');
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCloseRef = useRef(onClose);
+  const onUploadFileRef = useRef(onUploadFile);
+  const selectedDataTypeRef = useRef(selectedDataType);
+  const dataTypesRef = useRef<Array<{id: string; label: string}>>([]);
 
-  // Reset states when modal opens/closes
-  useEffect(() => {
-    if (isOpen) {
-      setProcessing(false);
-      setCurrentStageIdx(0);
-      setUploadProgress(0);
-      setUploadDone(false);
-      setUploadFailed('');
-    }
-  }, [isOpen]);
-
-  // Cleanup interval on unmount
-  useEffect(() => {
-    return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
-    };
-  }, []);
+  // Keep latest callbacks/refs in sync
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => { onUploadFileRef.current = onUploadFile; }, [onUploadFile]);
+  useEffect(() => { selectedDataTypeRef.current = selectedDataType; }, [selectedDataType]);
 
   const dataTypes = [
     { id: 'vector', label: '矢量数据', icon: Map, formats: '.zip (内含 .shp)', size: '20GB', detail: 'ZIP 压缩包的 shp 格式矢量数据' },
@@ -85,6 +79,35 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
     { id: 'original-image', label: '原始影像数据', icon: FileText, formats: '.zip, .tar.gz', size: '20GB', detail: '支持：高分1A / 高分1B / Landsat 8 / 资源三号02 / 高分2' },
     { id: '3d', label: '三维数据', icon: Box, formats: '.zip (内含 .osgb)', size: '20GB', detail: 'ZIP 压缩包的 osgb 格式三维模型数据' },
   ];
+
+  useEffect(() => { dataTypesRef.current = dataTypes; }, [dataTypes]);
+
+  // Reset all states when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setProcessing(false);
+      setCurrentStageIdx(0);
+      setUploadProgress(0);
+      setUploadDone(false);
+      setUploadFailed('');
+      setFormatError('');
+    } else {
+      // Clear file when modal closes
+      setSelectedFile(null);
+      setDataName('');
+      setDescription('');
+      setFormatError('');
+      setUserTouchedName(false);
+    }
+  }, [isOpen]);
+
+  // Cleanup intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -104,14 +127,28 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setSelectedFile(e.dataTransfer.files[0]);
+      applySelectedFile(e.dataTransfer.files[0]);
     }
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      setSelectedFile(files[0]);
+      applySelectedFile(files[0]);
+    }
+    // Reset input value so selecting the same file again re-triggers onChange
+    e.target.value = '';
+  };
+
+  const applySelectedFile = (file: File) => {
+    setSelectedFile(file);
+    // Frontend format validation on selection
+    const err = validateFileByType(file, selectedDataTypeRef.current);
+    setFormatError(err || '');
+    // Auto-fill data name with file name (without extension) unless user already typed
+    if (!userTouchedName) {
+      const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+      setDataName(nameWithoutExt);
     }
   };
 
@@ -124,6 +161,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
 
     let stageIdx = 0;
     let progress = 0;
+    const dataTypeLabel = dataTypesRef.current.find(t => t.id === selectedDataTypeRef.current)?.label || '';
 
     const tick = setInterval(() => {
       const stage = UPLOAD_STAGES[stageIdx];
@@ -137,7 +175,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
         if (stage.failRate && Math.random() < stage.failRate) {
           clearInterval(tick);
           tickRef.current = null;
-          const errorMsg = `校验失败：文件缺少时空属性或不符合${dataTypes.find(t => t.id === selectedDataType)?.label}数据规范`;
+          const errorMsg = `校验失败：文件缺少时空属性或不符合${dataTypeLabel}数据规范`;
           setUploadFailed(errorMsg);
           return;
         }
@@ -150,9 +188,10 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           tickRef.current = null;
           setUploadProgress(100);
           setUploadDone(true);
-          // Auto close after showing success
-          setTimeout(() => {
-            onClose();
+          // Auto close after showing success - use ref to avoid stale closure (React #185)
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          timeoutRef.current = setTimeout(() => {
+            onCloseRef.current();
           }, 1800);
           return;
         }
@@ -167,18 +206,18 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   const handleConfirm = () => {
     if (!selectedFile) return;
 
-    // Step 1: Frontend format validation
+    // Frontend format validation
     const err = validateFileByType(selectedFile, selectedDataType);
     if (err) {
-      alert(err);
+      setFormatError(err);
       return;
     }
 
-    // Step 2: Call parent to create task, then start simulation
-    onUploadFile?.({
+    // Call parent to create task, then start simulation
+    onUploadFileRef.current?.({
       file: selectedFile,
       dataType: selectedDataType,
-      dataName,
+      dataName: dataName.trim() || selectedFile.name.replace(/\.[^.]+$/, ''),
       description,
       checkProjection,
     });
@@ -189,7 +228,18 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   const handleCancelUpload = () => {
     if (tickRef.current) clearInterval(tickRef.current);
     tickRef.current = null;
-    onClose();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = null;
+    onCloseRef.current();
+  };
+
+  // Switch data type -> clear file (and any related state) for proper isolation
+  const handleDataTypeChange = (newType: string) => {
+    if (newType === selectedDataType) return;
+    setSelectedDataType(newType);
+    setSelectedFile(null);
+    setFormatError('');
+    // Re-validate the current data name against new type if there's a file
   };
 
   if (!isOpen) return null;
@@ -354,7 +404,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
               <input
                 type="text"
                 value={dataName}
-                onChange={(e) => setDataName(e.target.value)}
+                onChange={(e) => { setDataName(e.target.value); setUserTouchedName(true); }}
                 placeholder="请输入数据名称"
                 maxLength={100}
                 className="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -376,7 +426,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
                 return (
                   <button
                     key={type.id}
-                    onClick={() => setSelectedDataType(type.id)}
+                    onClick={() => handleDataTypeChange(type.id)}
                     className={`p-4 border-2 rounded-lg flex flex-col items-center gap-2 transition-all ${
                       isSelected
                         ? 'border-blue-500 bg-blue-50'
@@ -402,13 +452,15 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
               className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${
                 isDragging
                   ? 'border-blue-500 bg-blue-50'
-                  : selectedFile ? 'bg-green-50 border-green-300' : 'border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/30'
+                  : formatError
+                    ? 'bg-red-50 border-red-300'
+                    : selectedFile ? 'bg-green-50 border-green-300' : 'border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/30'
               }`}
             >
               <Upload
                 size={40}
                 className={`mx-auto mb-3 ${
-                  isDragging ? 'text-blue-500' : selectedFile ? 'text-green-500' : 'text-gray-400'
+                  isDragging ? 'text-blue-500' : formatError ? 'text-red-500' : selectedFile ? 'text-green-500' : 'text-gray-400'
                 }`}
               />
               {selectedFile ? (
@@ -416,7 +468,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
                   <p className="text-sm text-gray-700 font-medium mb-1">{selectedFile.name}</p>
                   <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedFile(null); setFormatError(''); }}
                     className="mt-2 text-sm text-red-600 hover:text-red-700"
                   >
                     移除文件
@@ -442,6 +494,12 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
                 </div>
               )}
             </div>
+            {formatError && (
+              <div className="mt-2 flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded">
+                <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-700">{formatError}</p>
+              </div>
+            )}
           </div>
 
           <div>
@@ -488,7 +546,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!dataName || !selectedFile}
+            disabled={!dataName || !selectedFile || !!formatError}
             className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             确定
