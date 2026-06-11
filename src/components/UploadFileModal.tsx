@@ -230,7 +230,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
                     请点击上传或拖拽文件到此处，文件大小不能超过 20GB，支持格式：
                     <span className="text-gray-700 font-medium">{dataTypes.find(t => t.id === selectedDataType)?.formats}</span>
                   </p>
-                  {dataTypes.find(t => t.id === selectedDataType)?.detail && (
+                  {selectedDataType === 'original-image' && (
                     <p className="text-xs text-gray-400 mt-1">
                       {dataTypes.find(t => t.id === selectedDataType)?.detail}
                     </p>
