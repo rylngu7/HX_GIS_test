@@ -212,7 +212,7 @@ const TaskItemInCenter: React.FC<{
               {getStatusBadge()}
             </div>
             <div className="text-xs text-gray-500 flex items-center gap-4 mt-1">
-              <span>提交时间: {new Date(task.createdAt).toLocaleTimeString()}</span>
+              <span>提交时间: {new Date(task.createdAt).toLocaleString()}</span>
               {task.fileSize && <span>文件大小: {task.fileSize}</span>}
             </div>
             {task.status === 'processing' && (

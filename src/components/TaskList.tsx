@@ -314,7 +314,7 @@ const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">
-                  {new Date(task.createdAt).toLocaleTimeString()}
+                  {new Date(task.createdAt).toLocaleString()}
                 </span>
                 {task.fileSize && (
                   <span className="text-xs text-gray-400">

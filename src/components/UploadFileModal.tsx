@@ -18,42 +18,52 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   const getFormatsForType = (type) => {
     switch (type) {
       case 'vector':
-        return 'shp, gdb';
+        return '.zip (内含 .shp)';
       case 'raster':
-        return 'tif, tiff';
+        return '.tif, .tiff';
       case 'original-image':
-        return 'zip, tar.gz';
+        return '.zip, .tar.gz';
       case '3d':
-        return 'zip';
+        return '.zip (内含 .osgb)';
       default:
-        return 'zip';
+        return '.zip';
     }
   };
+
+  const getSizeLimit = (type) => '20GB';
 
   const dataTypes = [
     {
       id: 'vector',
       label: '矢量数据',
       icon: Map,
-      formats: 'shp, gdb'
+      formats: '.zip (内含 .shp)',
+      size: '20GB',
+      detail: 'ZIP 压缩包的 shp 格式矢量数据'
     },
     {
       id: 'raster',
       label: '栅格数据',
       icon: Image,
-      formats: 'tif, tiff'
+      formats: '.tif, .tiff',
+      size: '20GB',
+      detail: 'TIF / TIFF 格式栅格影像数据'
     },
     {
       id: 'original-image',
       label: '原始影像数据',
       icon: FileText,
-      formats: 'zip'
+      formats: '.zip, .tar.gz',
+      size: '20GB',
+      detail: '支持：高分1A / 高分1B / Landsat 8 / 资源三号02 / 高分2'
     },
     {
       id: '3d',
       label: '三维数据',
       icon: Box,
-      formats: 'zip'
+      formats: '.zip (内含 .osgb)',
+      size: '20GB',
+      detail: 'ZIP 压缩包的 osgb 格式三维模型数据'
     }
   ];
 
@@ -168,20 +178,6 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
             </div>
           </div>
 
-          {selectedDataType === 'original-image' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="text-sm text-blue-800">
-                <div className="font-medium mb-2">格式限制</div>
-                <p>仅支持 ZIP、TAR.GZ 格式</p>
-              </div>
-              <div className="text-sm text-blue-800 mt-3">
-                <div className="font-medium mb-2">数据限制</div>
-                <p>仅支持以下卫星数据：</p>
-                <p className="mt-1">高分1A、高分1B、Landsat 8、资源三号02、高分2</p>
-              </div>
-            </div>
-          )}
-
           <div>
             <div
               onDragEnter={handleDragEnter}
@@ -231,14 +227,28 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
                     </span>
                   </label>
                   <p className="text-sm text-gray-500">
-                    请点击上传或拖拽文件到此处，文件大小不能超过4GB，支持格式：
-                    <span className="text-gray-700">
-                      {getFormatsForType(selectedDataType)}
-                    </span>
+                    请点击上传或拖拽文件到此处，文件大小不能超过 20GB
                   </p>
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="font-medium whitespace-nowrap">文件格式：</span>
+              <span>{dataTypes.find(t => t.id === selectedDataType)?.formats}</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="font-medium whitespace-nowrap">大小限制：</span>
+              <span>单个文件不超过 {getSizeLimit(selectedDataType)}</span>
+            </div>
+            {dataTypes.find(t => t.id === selectedDataType)?.detail && (
+              <div className="flex items-start gap-2">
+                <span className="font-medium whitespace-nowrap">数据说明：</span>
+                <span>{dataTypes.find(t => t.id === selectedDataType)?.detail}</span>
+              </div>
+            )}
           </div>
 
           <div>
