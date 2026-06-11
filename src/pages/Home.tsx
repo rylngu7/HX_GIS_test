@@ -32,52 +32,8 @@ export default function Home() {
 
   const handleUploadFile = (payload: { file: File; dataType: string; dataName: string; description: string; checkProjection: boolean }) => {
     const fileSize = formatFileSize(payload.file.size);
-    const taskId = addTask(`上传: ${payload.dataName}`, fileSize, payload.dataType, payload.dataName);
+    addTask(`上传: ${payload.dataName}`, fileSize, payload.dataType, payload.dataName);
     setTaskCenterOpen(true);
-
-    const stages: Array<{ target: number; stage: 'uploading' | 'validating' | 'parsing' | 'storing'; text: string; failRate: number }> = [
-      { target: 25,  stage: 'uploading',  text: '正在上传文件',           failRate: 0 },
-      { target: 60,  stage: 'validating', text: '后端格式与质量校验',     failRate: 0.15 },
-      { target: 85,  stage: 'parsing',    text: '正在解析数据',           failRate: 0.05 },
-      { target: 100, stage: 'storing',    text: '写入数据目录',           failRate: 0.03 },
-    ];
-
-    let currentStageIdx = 0;
-    let progress = 0;
-
-    updateTaskProgress(taskId, 0, { stage: 'uploading', stageText: stages[0].text });
-
-    const tick = setInterval(() => {
-      const stage = stages[currentStageIdx];
-      progress += Math.random() * 5 + 2;
-      if (progress >= stage.target) {
-        progress = stage.target;
-        updateTaskProgress(taskId, progress, { stage: stage.stage, stageText: stage.text });
-
-        if (Math.random() < stage.failRate) {
-          clearInterval(tick);
-          const errorMsg = {
-            uploading:  '上传失败：网络中断，请重试',
-            validating: '校验失败：文件缺少时空属性或不符合数据规范',
-            parsing:    '解析失败：文件内容损坏或格式不匹配',
-            storing:    '入库失败：写入数据目录时发生错误',
-          }[stage.stage];
-          updateTaskStatus(taskId, 'failed', errorMsg);
-          return;
-        }
-
-        currentStageIdx++;
-        if (currentStageIdx >= stages.length) {
-          clearInterval(tick);
-          updateTaskStatus(taskId, 'completed');
-          return;
-        }
-        const next = stages[currentStageIdx];
-        updateTaskProgress(taskId, progress, { stage: next.stage, stageText: next.text });
-      } else {
-        updateTaskProgress(taskId, progress);
-      }
-    }, 250);
   };
 
   const handleExecute = (toolName: string, params?: any) => {

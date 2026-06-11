@@ -214,7 +214,7 @@ const TaskItemInCenter: React.FC<{
             <div className="text-xs text-gray-500 flex items-center gap-4 mt-1">
               <span>提交时间: {new Date(task.createdAt).toLocaleString()}</span>
               {task.fileSize && <span>大小: {task.fileSize}</span>}
-              {task.stageText && task.status === 'processing' && (
+              {task.stageText && task.status === 'processing' && !task.name.startsWith('上传:') && (
                 <span className="text-blue-600 font-medium">阶段: {task.stageText}</span>
               )}
             </div>

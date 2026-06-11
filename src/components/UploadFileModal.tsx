@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { X, Upload, Map, Box, Image, FileText } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { X, Upload, Map, Box, Image, FileText, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 
 interface UploadFileModalProps {
   isOpen: boolean;
@@ -38,81 +38,69 @@ const validateFileByType = (file: File, dataType: string): string | null => {
   }
 };
 
+const UPLOAD_STAGES = [
+  { key: 'uploading',  label: '正在上传文件到服务器',      progressRange: [0, 25] },
+  { key: 'validating', label: '后端格式与质量校验中',     progressRange: [25, 60], failRate: 0.15 },
+  { key: 'parsing',    label: '正在解析数据内容',         progressRange: [60, 85], failRate: 0.05 },
+  { key: 'storing',    label: '写入数据目录',              progressRange: [85, 100], failRate: 0.03 },
+];
+
 export default function UploadFileModal({ isOpen, onClose, onUploadFile }: UploadFileModalProps) {
   const [dataName, setDataName] = useState('');
   const [selectedDataType, setSelectedDataType] = useState('vector');
   const [description, setDescription] = useState('');
   const [checkProjection, setCheckProjection] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const getFormatsForType = (type) => {
-    switch (type) {
-      case 'vector':
-        return '.zip (内含 .shp)';
-      case 'raster':
-        return '.tif, .tiff';
-      case 'original-image':
-        return '.zip, .tar.gz';
-      case '3d':
-        return '.zip (内含 .osgb)';
-      default:
-        return '.zip';
-    }
-  };
+  // Processing states
+  const [processing, setProcessing] = useState(false);
+  const [currentStageIdx, setCurrentStageIdx] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadDone, setUploadDone] = useState(false);
+  const [uploadFailed, setUploadFailed] = useState('');
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const getSizeLimit = (type) => '20GB';
+  // Reset states when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setProcessing(false);
+      setCurrentStageIdx(0);
+      setUploadProgress(0);
+      setUploadDone(false);
+      setUploadFailed('');
+    }
+  }, [isOpen]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+  }, []);
 
   const dataTypes = [
-    {
-      id: 'vector',
-      label: '矢量数据',
-      icon: Map,
-      formats: '.zip (内含 .shp)',
-      size: '20GB',
-      detail: 'ZIP 压缩包的 shp 格式矢量数据'
-    },
-    {
-      id: 'raster',
-      label: '栅格数据',
-      icon: Image,
-      formats: '.tif, .tiff',
-      size: '20GB',
-      detail: 'TIF / TIFF 格式栅格影像数据'
-    },
-    {
-      id: 'original-image',
-      label: '原始影像数据',
-      icon: FileText,
-      formats: '.zip, .tar.gz',
-      size: '20GB',
-      detail: '支持：高分1A / 高分1B / Landsat 8 / 资源三号02 / 高分2'
-    },
-    {
-      id: '3d',
-      label: '三维数据',
-      icon: Box,
-      formats: '.zip (内含 .osgb)',
-      size: '20GB',
-      detail: 'ZIP 压缩包的 osgb 格式三维模型数据'
-    }
+    { id: 'vector', label: '矢量数据', icon: Map, formats: '.zip (内含 .shp)', size: '20GB', detail: 'ZIP 压缩包的 shp 格式矢量数据' },
+    { id: 'raster', label: '栅格数据', icon: Image, formats: '.tif, .tiff', size: '20GB', detail: 'TIF / TIFF 格式栅格影像数据' },
+    { id: 'original-image', label: '原始影像数据', icon: FileText, formats: '.zip, .tar.gz', size: '20GB', detail: '支持：高分1A / 高分1B / Landsat 8 / 资源三号02 / 高分2' },
+    { id: '3d', label: '三维数据', icon: Box, formats: '.zip (内含 .osgb)', size: '20GB', detail: 'ZIP 压缩包的 osgb 格式三维模型数据' },
   ];
 
-  const handleDragEnter = useCallback((e) => {
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
 
-  const handleDragLeave = useCallback((e) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
   }, []);
 
-  const handleDragOver = useCallback((e) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
   }, []);
 
-  const handleDrop = useCallback((e) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -120,19 +108,73 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
     }
   }, []);
 
-  const handleFileSelect = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedFile(files[0]);
     }
+  };
+
+  const startUploadSimulation = () => {
+    setProcessing(true);
+    setCurrentStageIdx(0);
+    setUploadProgress(0);
+    setUploadDone(false);
+    setUploadFailed('');
+
+    let stageIdx = 0;
+    let progress = 0;
+
+    const tick = setInterval(() => {
+      const stage = UPLOAD_STAGES[stageIdx];
+      progress += Math.random() * 4 + 2;
+
+      if (progress >= stage.progressRange[1]) {
+        progress = stage.progressRange[1];
+        setUploadProgress(progress);
+
+        // Check for simulated failure at stage boundary
+        if (stage.failRate && Math.random() < stage.failRate) {
+          clearInterval(tick);
+          tickRef.current = null;
+          const errorMsg = `校验失败：文件缺少时空属性或不符合${dataTypes.find(t => t.id === selectedDataType)?.label}数据规范`;
+          setUploadFailed(errorMsg);
+          return;
+        }
+
+        stageIdx++;
+        setCurrentStageIdx(stageIdx);
+
+        if (stageIdx >= UPLOAD_STAGES.length) {
+          clearInterval(tick);
+          tickRef.current = null;
+          setUploadProgress(100);
+          setUploadDone(true);
+          // Auto close after showing success
+          setTimeout(() => {
+            onClose();
+          }, 1800);
+          return;
+        }
+      } else {
+        setUploadProgress(Math.round(progress));
+      }
+    }, 200);
+
+    tickRef.current = tick;
   };
 
   const handleConfirm = () => {
     if (!selectedFile) return;
+
+    // Step 1: Frontend format validation
     const err = validateFileByType(selectedFile, selectedDataType);
     if (err) {
       alert(err);
       return;
     }
+
+    // Step 2: Call parent to create task, then start simulation
     onUploadFile?.({
       file: selectedFile,
       dataType: selectedDataType,
@@ -140,11 +182,155 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
       description,
       checkProjection,
     });
+
+    startUploadSimulation();
+  };
+
+  const handleCancelUpload = () => {
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = null;
     onClose();
   };
 
   if (!isOpen) return null;
 
+  // ========== PROCESSING VIEW ==========
+  if (processing) {
+    const stageIcons = UPLOAD_STAGES.map((stage, idx) => {
+      if (idx < currentStageIdx) return 'done';
+      if (idx === currentStageIdx && !uploadDone && !uploadFailed) return 'active';
+      if (idx === currentStageIdx && uploadFailed) return 'failed';
+      return 'pending';
+    });
+
+    return (
+      <div className="fixed inset-0 flex justify-end z-[200]">
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="relative w-[480px] h-full bg-white shadow-2xl flex flex-col">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800">
+              {uploadFailed ? '上传失败' : uploadDone ? '上传完成' : '正在上传'}
+            </h2>
+            <button
+              onClick={handleCancelUpload}
+              className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {/* File info */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <FileText size={20} className="text-gray-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{selectedFile?.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {selectedFile ? (selectedFile.size / 1024 / 1024).toFixed(2) : '0'} MB
+                    {' · '}
+                    {dataTypes.find(t => t.id === selectedDataType)?.label}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">
+                  {uploadFailed ? '处理中断' : uploadDone ? '全部完成' : '处理中...'}
+                </span>
+                <span className="text-sm font-medium text-blue-600">{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 rounded-full ${
+                    uploadFailed ? 'bg-red-500' : uploadDone ? 'bg-green-500' : 'bg-blue-600'
+                  }`}
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Stage list */}
+            <div className="space-y-3">
+              {UPLOAD_STAGES.map((stage, idx) => {
+                const icon = stageIcons[idx];
+                return (
+                  <div
+                    key={stage.key}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                      icon === 'active'
+                        ? 'border-blue-300 bg-blue-50'
+                        : icon === 'done'
+                        ? 'border-green-200 bg-green-50/50'
+                        : icon === 'failed'
+                        ? 'border-red-200 bg-red-50'
+                        : 'border-gray-200 bg-white'
+                    }`}
+                  >
+                    <div className="flex-shrink-0">
+                      {icon === 'done' && <CheckCircle size={20} className="text-green-500" />}
+                      {icon === 'active' && <Loader2 size={20} className="text-blue-600 animate-spin" />}
+                      {icon === 'failed' && <AlertCircle size={20} className="text-red-500" />}
+                      {icon === 'pending' && (
+                        <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-medium ${
+                          icon === 'active' ? 'text-blue-700' : icon === 'done' ? 'text-green-700' : icon === 'failed' ? 'text-red-700' : 'text-gray-500'
+                        }`}
+                      >
+                        {stage.label}
+                      </p>
+                      {idx < UPLOAD_STAGES.length - 1 && icon === 'active' && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          预计还需 {Math.ceil((stage.progressRange[1] - uploadProgress) / 6)} 秒
+                        </p>
+                      )}
+                    </div>
+                    {icon === 'done' && (
+                      <span className="text-xs text-green-600 font-medium">完成</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Error message */}
+            {uploadFailed && (
+              <div className="mt-4 p-3 bg-red-100 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{uploadFailed}</p>
+              </div>
+            )}
+
+            {/* Success message */}
+            {uploadDone && (
+              <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
+                <CheckCircle size={24} className="text-green-500 mx-auto mb-1" />
+                <p className="text-sm text-green-700 font-medium">文件上传并校验完成</p>
+                <p className="text-xs text-green-600 mt-1">即将自动关闭...</p>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
+            <button
+              onClick={handleCancelUpload}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+            >
+              {uploadDone || uploadFailed ? '关闭' : '取消上传'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ========== FORM VIEW ==========
   return (
     <div className="fixed inset-0 flex justify-end z-[200]">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -197,13 +383,8 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
                         : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
-                    <Icon
-                      size={24}
-                      className={isSelected ? 'text-blue-600' : 'text-gray-500'}
-                    />
-                    <span className={`text-sm font-medium ${
-                      isSelected ? 'text-blue-800' : 'text-gray-700'
-                    }`}>
+                    <Icon size={24} className={isSelected ? 'text-blue-600' : 'text-gray-500'} />
+                    <span className={`text-sm font-medium ${isSelected ? 'text-blue-800' : 'text-gray-700'}`}>
                       {type.label}
                     </span>
                   </button>
@@ -232,17 +413,10 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
               />
               {selectedFile ? (
                 <div>
-                  <p className="text-sm text-gray-700 font-medium mb-1">
-                    {selectedFile.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
+                  <p className="text-sm text-gray-700 font-medium mb-1">{selectedFile.name}</p>
+                  <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedFile(null);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
                     className="mt-2 text-sm text-red-600 hover:text-red-700"
                   >
                     移除文件
@@ -251,11 +425,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
               ) : (
                 <div>
                   <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      className="hidden"
-                      onChange={handleFileSelect}
-                    />
+                    <input type="file" className="hidden" onChange={handleFileSelect} />
                     <span className="inline-block px-6 py-2 border border-gray-300 rounded text-sm text-gray-600 bg-white hover:bg-gray-100 mb-2">
                       选择文件
                     </span>
@@ -275,9 +445,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              描述
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">描述</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -288,14 +456,10 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">
-              投影缺失检查
-            </label>
+            <label className="text-sm font-medium text-gray-700">投影缺失检查</label>
             <button
               onClick={() => setCheckProjection(!checkProjection)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${
-                checkProjection ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
+              className={`w-12 h-6 rounded-full transition-colors relative ${checkProjection ? 'bg-blue-600' : 'bg-gray-300'}`}
             >
               <div
                 className={`w-5 h-5 bg-white rounded-full shadow absolute top-0.5 transition-transform ${
@@ -310,9 +474,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
               数据目录选择 <span className="text-red-500">*</span>
             </label>
             <div className="border border-gray-200 rounded-lg p-6">
-              <div className="text-center text-gray-400">
-                暂无数据
-              </div>
+              <div className="text-center text-gray-400">暂无数据</div>
             </div>
           </div>
         </div>
