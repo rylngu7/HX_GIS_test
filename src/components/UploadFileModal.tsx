@@ -4,8 +4,39 @@ import { X, Upload, Map, Box, Image, FileText } from 'lucide-react';
 interface UploadFileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUploadFile?: (file: File) => void;
+  onUploadFile?: (payload: {
+    file: File;
+    dataType: string;
+    dataName: string;
+    description: string;
+    checkProjection: boolean;
+  }) => void;
 }
+
+const validateFileByType = (file: File, dataType: string): string | null => {
+  const MAX_SIZE = 20 * 1024 * 1024 * 1024;
+  if (file.size > MAX_SIZE) return '文件大小超过 20GB 限制';
+
+  const name = file.name.toLowerCase();
+  switch (dataType) {
+    case 'vector':
+      if (!name.endsWith('.zip')) return '矢量数据仅支持 .zip 压缩包（内含 .shp）';
+      return null;
+    case 'raster':
+      if (!name.endsWith('.tif') && !name.endsWith('.tiff'))
+        return '栅格数据仅支持 .tif / .tiff 格式';
+      return null;
+    case 'original-image':
+      if (!name.endsWith('.zip') && !name.endsWith('.tar.gz'))
+        return '原始影像仅支持 .zip / .tar.gz 格式';
+      return null;
+    case '3d':
+      if (!name.endsWith('.zip')) return '三维数据仅支持 .zip 压缩包（内含 .osgb）';
+      return null;
+    default:
+      return '未知数据类型';
+  }
+};
 
 export default function UploadFileModal({ isOpen, onClose, onUploadFile }: UploadFileModalProps) {
   const [dataName, setDataName] = useState('');
@@ -96,16 +127,19 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   };
 
   const handleConfirm = () => {
-    console.log('Uploading:', {
-      dataName,
+    if (!selectedFile) return;
+    const err = validateFileByType(selectedFile, selectedDataType);
+    if (err) {
+      alert(err);
+      return;
+    }
+    onUploadFile?.({
+      file: selectedFile,
       dataType: selectedDataType,
+      dataName,
       description,
       checkProjection,
-      file: selectedFile
     });
-    if (selectedFile && onUploadFile) {
-      onUploadFile(selectedFile);
-    }
     onClose();
   };
 

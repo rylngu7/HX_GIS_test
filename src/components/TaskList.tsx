@@ -9,6 +9,10 @@ export interface Task {
   createdAt: number;
   error?: string;
   fileSize?: string;
+  dataType?: 'vector' | 'raster' | 'original-image' | '3d';
+  dataName?: string;
+  stage?: 'uploading' | 'validating' | 'parsing' | 'storing';
+  stageText?: string;
 }
 
 interface TaskListProps {
@@ -465,7 +469,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearComplete
 export const useTaskManager = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const addTask = useCallback((taskName: string, fileSize?: string): string => {
+  const addTask = useCallback((taskName: string, fileSize?: string, dataType?: string, dataName?: string): string => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const newTask: Task = {
       id,
@@ -474,19 +478,24 @@ export const useTaskManager = () => {
       status: 'processing',
       createdAt: Date.now(),
       fileSize,
+      dataType: dataType as Task['dataType'],
+      dataName,
+      stage: dataType ? 'uploading' : undefined,
+      stageText: dataType ? '正在上传文件' : undefined,
     };
     setTasks(prev => [...prev, newTask]);
     return id;
   }, []);
 
-  const updateTaskProgress = useCallback((taskId: string, progress: number) => {
+  const updateTaskProgress = useCallback((taskId: string, progress: number, patch?: Partial<Task>) => {
     setTasks(prev =>
       prev.map(task =>
         task.id === taskId
-          ? { 
-              ...task, 
-              progress, 
-              status: progress >= 100 ? 'completed' : 'processing' 
+          ? {
+              ...task,
+              ...patch,
+              progress,
+              status: progress >= 100 ? 'completed' : 'processing',
             }
           : task
       )
