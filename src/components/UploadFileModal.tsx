@@ -184,15 +184,15 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
               onDragLeave={handleDragLeave}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${
                 isDragging
                   ? 'border-blue-500 bg-blue-50'
                   : selectedFile ? 'bg-green-50 border-green-300' : 'border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/30'
               }`}
             >
               <Upload
-                size={48}
-                className={`mx-auto mb-4 ${
+                size={40}
+                className={`mx-auto mb-3 ${
                   isDragging ? 'text-blue-500' : selectedFile ? 'text-green-500' : 'text-gray-400'
                 }`}
               />
@@ -222,33 +222,22 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
                       className="hidden"
                       onChange={handleFileSelect}
                     />
-                    <span className="inline-block px-4 py-2 border border-gray-300 rounded text-sm text-gray-600 bg-white hover:bg-gray-100 mb-3">
+                    <span className="inline-block px-6 py-2 border border-gray-300 rounded text-sm text-gray-600 bg-white hover:bg-gray-100 mb-2">
                       选择文件
                     </span>
                   </label>
-                  <p className="text-sm text-gray-500">
-                    请点击上传或拖拽文件到此处，文件大小不能超过 20GB
+                  <p className="text-xs text-gray-500">
+                    请点击上传或拖拽文件到此处，文件大小不能超过 20GB，支持格式：
+                    <span className="text-gray-700 font-medium">{dataTypes.find(t => t.id === selectedDataType)?.formats}</span>
                   </p>
+                  {dataTypes.find(t => t.id === selectedDataType)?.detail && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {dataTypes.find(t => t.id === selectedDataType)?.detail}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-2">
-            <div className="flex items-start gap-2">
-              <span className="font-medium whitespace-nowrap">文件格式：</span>
-              <span>{dataTypes.find(t => t.id === selectedDataType)?.formats}</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="font-medium whitespace-nowrap">大小限制：</span>
-              <span>单个文件不超过 {getSizeLimit(selectedDataType)}</span>
-            </div>
-            {dataTypes.find(t => t.id === selectedDataType)?.detail && (
-              <div className="flex items-start gap-2">
-                <span className="font-medium whitespace-nowrap">数据说明：</span>
-                <span>{dataTypes.find(t => t.id === selectedDataType)?.detail}</span>
-              </div>
-            )}
           </div>
 
           <div>
