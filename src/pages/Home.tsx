@@ -30,9 +30,26 @@ export default function Home() {
     else return `${(bytes / 1048576).toFixed(2)} MB`;
   };
 
-  const handleUploadFile = (payload: { file: File; dataType: string; dataName: string; description: string; checkProjection: boolean }) => {
+  // Track the latest upload task id so simulation updates can target the same task
+  const latestUploadTaskIdRef = React.useRef<string | null>(null);
+
+  const handleUploadFile = (payload: { file: File; dataType: string; dataName: string; description: string; checkProjection: boolean; targetDirectory?: string; _stageSuccess?: boolean; _stageFailure?: string; _stageKey?: string }) => {
+    // Case 1: stage failure callback from UploadFileModal -> mark the task as failed
+    if (payload._stageFailure && latestUploadTaskIdRef.current) {
+      updateTaskStatus(latestUploadTaskIdRef.current, 'failed', payload._stageFailure);
+      latestUploadTaskIdRef.current = null;
+      return;
+    }
+    // Case 2: stage success callback -> mark the task as completed
+    if (payload._stageSuccess && latestUploadTaskIdRef.current) {
+      updateTaskStatus(latestUploadTaskIdRef.current, 'completed');
+      latestUploadTaskIdRef.current = null;
+      return;
+    }
+    // Case 3: initial create-task call
     const fileSize = formatFileSize(payload.file.size);
-    addTask(`上传: ${payload.dataName}`, fileSize, payload.dataType, payload.dataName);
+    const taskId = addTask(`上传: ${payload.dataName}`, fileSize, payload.dataType, payload.dataName);
+    latestUploadTaskIdRef.current = taskId;
     setTaskCenterOpen(true);
   };
 

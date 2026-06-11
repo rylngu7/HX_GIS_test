@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { X, Upload, Map, Box, Image, FileText, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { X, Upload, Map, Box, Image, FileText, CheckCircle, Loader2, AlertCircle, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface UploadFileModalProps {
   isOpen: boolean;
@@ -10,7 +10,15 @@ interface UploadFileModalProps {
     dataName: string;
     description: string;
     checkProjection: boolean;
+    targetDirectory?: string;
+    _stageSuccess?: boolean;
+    _stageFailure?: string;
+    _stageKey?: string;
   }) => void;
+  onDirectorySelect?: (path: string) => void;
+  initialDirectory?: string;
+  initialDataName?: string;
+  initialDescription?: string;
 }
 
 const validateFileByType = (file: File, dataType: string): string | null => {
@@ -54,6 +62,8 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   const [isDragging, setIsDragging] = useState(false);
   const [formatError, setFormatError] = useState('');
   const [userTouchedName, setUserTouchedName] = useState(false);
+  const [targetDirectory, setTargetDirectory] = useState<string>('/data/原始库/矢量数据/2024年度');
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['/data', '/data/原始库', '/data/原始库/矢量数据']));
 
   // Processing states
   const [processing, setProcessing] = useState(false);
@@ -162,6 +172,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
     let stageIdx = 0;
     let progress = 0;
     const dataTypeLabel = dataTypesRef.current.find(t => t.id === selectedDataTypeRef.current)?.label || '';
+    const fileRef = selectedFile;
 
     const tick = setInterval(() => {
       const stage = UPLOAD_STAGES[stageIdx];
@@ -171,12 +182,30 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
         progress = stage.progressRange[1];
         setUploadProgress(progress);
 
-        // Check for simulated failure at stage boundary
-        if (stage.failRate && Math.random() < stage.failRate) {
+        // Check for stage failure: random probability OR backend validation error
+        let stageError: string | null = null;
+        if (stage.key === 'validating' && fileRef) {
+          // Hard-coded backend validation: vector + small zip = no shp
+          stageError = detectBackendValidationError(fileRef, selectedDataTypeRef.current);
+        }
+        if (!stageError && stage.failRate && Math.random() < stage.failRate) {
+          stageError = `校验失败：文件缺少时空属性或不符合${dataTypeLabel}数据规范`;
+        }
+
+        if (stageError) {
           clearInterval(tick);
           tickRef.current = null;
-          const errorMsg = `校验失败：文件缺少时空属性或不符合${dataTypeLabel}数据规范`;
-          setUploadFailed(errorMsg);
+          setUploadFailed(stageError);
+          // Notify parent (task manager) to mark this task as failed
+          onUploadFileRef.current?.({
+            file: fileRef!,
+            dataType: selectedDataTypeRef.current,
+            dataName: dataName.trim() || fileRef!.name.replace(/\.[^.]+$/, ''),
+            description,
+            checkProjection,
+            _stageFailure: stageError,
+            _stageKey: stage.key,
+          } as any);
           return;
         }
 
@@ -188,6 +217,15 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           tickRef.current = null;
           setUploadProgress(100);
           setUploadDone(true);
+          // Notify parent: task completed
+          onUploadFileRef.current?.({
+            file: fileRef!,
+            dataType: selectedDataTypeRef.current,
+            dataName: dataName.trim() || fileRef!.name.replace(/\.[^.]+$/, ''),
+            description,
+            checkProjection,
+            _stageSuccess: true,
+          } as any);
           // Auto close after showing success - use ref to avoid stale closure (React #185)
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
           timeoutRef.current = setTimeout(() => {
@@ -213,13 +251,14 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
       return;
     }
 
-    // Call parent to create task, then start simulation
+    // Call parent to create task (don't pass _stageSuccess/_stageFailure on initial call)
     onUploadFileRef.current?.({
       file: selectedFile,
       dataType: selectedDataType,
       dataName: dataName.trim() || selectedFile.name.replace(/\.[^.]+$/, ''),
       description,
       checkProjection,
+      targetDirectory,
     });
 
     startUploadSimulation();
@@ -240,6 +279,16 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
     setSelectedFile(null);
     setFormatError('');
     // Re-validate the current data name against new type if there's a file
+  };
+
+  // Mock backend validation: detect "zip without .shp" failure pattern
+  const detectBackendValidationError = (file: File, dataType: string): string | null => {
+    const name = file.name.toLowerCase();
+    // Heuristic: zip files that are very small (< 10KB) are mocked as "no .shp inside"
+    if (dataType === 'vector' && name.endsWith('.zip') && file.size < 10 * 1024) {
+      return '后端校验失败：zip 压缩包内未检测到 .shp 矢量文件，请检查数据完整性';
+    }
+    return null;
   };
 
   if (!isOpen) return null;
@@ -528,11 +577,33 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              数据目录选择 <span className="text-red-500">*</span>
-            </label>
-            <div className="border border-gray-200 rounded-lg p-6">
-              <div className="text-center text-gray-400">暂无数据</div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                数据目录选择 <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => {/* placeholder: 新增目录 */}}
+                className="text-xs px-2 py-1 text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+              >
+                + 新增目录
+              </button>
+            </div>
+            <DirectoryTree
+              selectedPath={targetDirectory}
+              expandedDirs={expandedDirs}
+              onToggleExpand={(path) => {
+                setExpandedDirs(prev => {
+                  const next = new Set(prev);
+                  if (next.has(path)) next.delete(path);
+                  else next.add(path);
+                  return next;
+                });
+              }}
+              onSelect={(path) => setTargetDirectory(path)}
+            />
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-xs text-blue-700">
+              已选目录：<span className="font-medium">{targetDirectory}</span>
             </div>
           </div>
         </div>
@@ -553,6 +624,124 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ========== Directory Tree Component ==========
+interface DirectoryNode {
+  path: string;
+  name: string;
+  children?: DirectoryNode[];
+}
+
+const DIRECTORY_TREE: DirectoryNode = {
+  path: '/data',
+  name: 'data',
+  children: [
+    {
+      path: '/data/原始库',
+      name: '原始库',
+      children: [
+        {
+          path: '/data/原始库/矢量数据',
+          name: '矢量数据',
+          children: [
+            { path: '/data/原始库/矢量数据/2024年度', name: '2024年度' },
+            { path: '/data/原始库/矢量数据/2025年度', name: '2025年度' },
+            { path: '/data/原始库/矢量数据/历史归档', name: '历史归档' },
+          ],
+        },
+        {
+          path: '/data/原始库/栅格数据',
+          name: '栅格数据',
+          children: [
+            { path: '/data/原始库/栅格数据/2024年度', name: '2024年度' },
+            { path: '/data/原始库/栅格数据/2025年度', name: '2025年度' },
+          ],
+        },
+        {
+          path: '/data/原始库/原始影像',
+          name: '原始影像',
+          children: [
+            { path: '/data/原始库/原始影像/高分系列', name: '高分系列' },
+            { path: '/data/原始库/原始影像/Landsat', name: 'Landsat' },
+            { path: '/data/原始库/原始影像/资源三号', name: '资源三号' },
+          ],
+        },
+        {
+          path: '/data/原始库/三维数据',
+          name: '三维数据',
+          children: [
+            { path: '/data/原始库/三维数据/城市模型', name: '城市模型' },
+            { path: '/data/原始库/三维数据/地形模型', name: '地形模型' },
+          ],
+        },
+      ],
+    },
+    {
+      path: '/data/标准库',
+      name: '标准库',
+      children: [
+        { path: '/data/标准库/基础地理', name: '基础地理' },
+        { path: '/data/标准库/专题数据', name: '专题数据' },
+      ],
+    },
+    {
+      path: '/data/融合库',
+      name: '融合库',
+      children: [
+        { path: '/data/融合库/产品成果', name: '产品成果' },
+        { path: '/data/融合库/中间成果', name: '中间成果' },
+      ],
+    },
+  ],
+};
+
+interface DirectoryTreeProps {
+  selectedPath: string;
+  expandedDirs: Set<string>;
+  onToggleExpand: (path: string) => void;
+  onSelect: (path: string) => void;
+}
+
+function DirectoryTree({ selectedPath, expandedDirs, onToggleExpand, onSelect }: DirectoryTreeProps) {
+  const renderNode = (node: DirectoryNode, level: number = 0) => {
+    const isExpanded = expandedDirs.has(node.path);
+    const isSelected = selectedPath === node.path;
+    const isLeaf = !node.children || node.children.length === 0;
+    return (
+      <div key={node.path}>
+        <div
+          className={`flex items-center gap-1 py-1 px-2 rounded cursor-pointer text-sm transition-colors ${
+            isSelected ? 'bg-blue-100 text-blue-800 font-medium' : 'hover:bg-gray-100 text-gray-700'
+          }`}
+          style={{ paddingLeft: `${level * 16 + 8}px` }}
+          onClick={() => {
+            if (!isLeaf) onToggleExpand(node.path);
+            onSelect(node.path);
+          }}
+        >
+          {!isLeaf ? (
+            isExpanded ? <ChevronDown size={14} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={14} className="text-gray-400 flex-shrink-0" />
+          ) : (
+            <span className="w-3.5 flex-shrink-0" />
+          )}
+          {isExpanded ? (
+            <FolderOpen size={14} className={`flex-shrink-0 ${isSelected ? 'text-blue-600' : 'text-yellow-500'}`} />
+          ) : (
+            <Folder size={14} className={`flex-shrink-0 ${isSelected ? 'text-blue-600' : 'text-yellow-500'}`} />
+          )}
+          <span className="truncate">{node.name}</span>
+        </div>
+        {!isLeaf && isExpanded && node.children?.map(child => renderNode(child, level + 1))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-2 max-h-56 overflow-y-auto bg-white">
+      {renderNode(DIRECTORY_TREE, 0)}
     </div>
   );
 }
