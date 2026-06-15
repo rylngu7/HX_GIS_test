@@ -40,7 +40,11 @@ import {
 // 3. 标注工作台（点击任务卡片进入）
 // ==============================================================
 
-const SampleAnnotation: React.FC = () => {
+const SampleAnnotation: React.FC<{
+  targetTaskId?: string | null;
+  targetLayerIdx?: number | null;
+  onConsumedTarget?: () => void;
+}> = ({ targetTaskId, targetLayerIdx, onConsumedTarget }) => {
   const tasks = useStore(annotationTaskStore);
   const [searchQuery, setSearchQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -50,6 +54,8 @@ const SampleAnnotation: React.FC = () => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   // 编辑任务弹窗
   const [editTask, setEditTask] = useState<AnnotationTask | null>(null);
+  // 待打开的目标图层索引（由外部传入后写入）
+  const [pendingLayerIdx, setPendingLayerIdx] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // 点击外部关闭三点菜单
@@ -62,6 +68,18 @@ const SampleAnnotation: React.FC = () => {
     if (openMenuId) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [openMenuId]);
+
+  // 监听外部跳转目标：自动进入对应任务的工作台
+  useEffect(() => {
+    if (targetTaskId) {
+      setActiveTaskId(targetTaskId);
+      if (typeof targetLayerIdx === 'number' && targetLayerIdx >= 0) {
+        setPendingLayerIdx(targetLayerIdx);
+      }
+      onConsumedTarget?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetTaskId, targetLayerIdx]);
 
   const filteredTasks = useMemo(
     () =>
@@ -78,7 +96,12 @@ const SampleAnnotation: React.FC = () => {
     return (
       <AnnotationWorkbench
         task={activeTask}
-        onBack={() => setActiveTaskId(null)}
+        onBack={() => {
+          setActiveTaskId(null);
+          setPendingLayerIdx(null);
+        }}
+        pendingLayerIdx={pendingLayerIdx}
+        onConsumedPendingLayer={() => setPendingLayerIdx(null)}
         onRequestComplete={() => setCompletePromptOpen(true)}
       />
     );
@@ -622,12 +645,16 @@ interface AnnotationWorkbenchProps {
   task: AnnotationTask;
   onBack: () => void;
   onRequestComplete: () => void;
+  pendingLayerIdx?: number | null;
+  onConsumedPendingLayer?: () => void;
 }
 
 const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
   task,
   onBack,
   onRequestComplete,
+  pendingLayerIdx,
+  onConsumedPendingLayer,
 }) => {
   const labelGroups = useStore(labelGroupStore);
   // 展平为「子标签」列表，数据来源于标签管理页面的全局分组
@@ -644,6 +671,16 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
   );
 
   const [currentLayerIdx, setCurrentLayerIdx] = useState(0);
+
+  // 外部传入的目标图层索引：自动跳转
+  React.useEffect(() => {
+    if (typeof pendingLayerIdx === 'number' && pendingLayerIdx >= 0) {
+      const safeIdx = Math.min(pendingLayerIdx, layers.length - 1);
+      setCurrentLayerIdx(safeIdx);
+      onConsumedPendingLayer?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingLayerIdx]);
   const [activeTool, setActiveTool] = useState<'box' | 'polygon' | null>(
     null,
   );
@@ -900,12 +937,6 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
             <span className="text-xs text-green-600">已保存 ✓</span>
           )}
           <div className="flex items-center gap-2">
-            <button
-              onClick={onRequestComplete}
-              className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-            >
-              完成当前项目
-            </button>
             <button
               onClick={handleSave}
               className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
@@ -1186,7 +1217,11 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
             </div>
             {currentLayerIdx === layers.length - 1 && allAnnotated && (
               <button
-                onClick={onRequestComplete}
+                onClick={() => {
+                  // 保存当前图层的标注后，直接返回样本解译一级页面
+                  handleSave();
+                  onBack();
+                }}
                 className="w-full mt-2 px-2 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
               >
                 完成当前项目

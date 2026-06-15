@@ -19,6 +19,7 @@ import {
   SampleCategory,
   SampleItem,
   AnnotationTask,
+  AnnotationItem,
   annotationTaskStore,
   sampleCategoryStore,
   genId,
@@ -78,7 +79,9 @@ const buildLayerStats = (category: SampleCategory, tasks: AnnotationTask[]) => {
 // 样本管理主入口
 // ==============================================================
 
-const SampleManagement: React.FC = () => {
+const SampleManagement: React.FC<{
+  onJumpToAnnotation?: (taskId: string, layerIdx: number) => void;
+}> = ({ onJumpToAnnotation }) => {
   const categories = useStore(sampleCategoryStore);
   const tasks = useStore(annotationTaskStore);
 
@@ -243,6 +246,7 @@ const SampleManagement: React.FC = () => {
         layerName={activeLayerName}
         onBackToCategory={() => setActiveLayerName(null)}
         tasks={tasks}
+        onJumpToAnnotation={onJumpToAnnotation}
       />
     );
   }
@@ -692,6 +696,7 @@ interface LayerDetailViewProps {
   layerName: string;
   onBackToCategory: () => void;
   tasks: AnnotationTask[];
+  onJumpToAnnotation?: (taskId: string, layerIdx: number) => void;
 }
 
 const LayerDetailView: React.FC<LayerDetailViewProps> = ({
@@ -699,14 +704,17 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
   layerName,
   onBackToCategory,
   tasks,
+  onJumpToAnnotation,
 }) => {
   const liveCategory = useStore(sampleCategoryStore).find(
     (c) => c.id === category.id,
   );
   const display = liveCategory || category;
+  // 放大查看的标注
+  const [previewing, setPreviewing] = useState<AnnotationItem | null>(null);
 
   // 从关联任务中找出该图层下的所有标注
-  const { annotations, taskName } = useMemo(() => {
+  const { annotations, taskId, taskName } = useMemo(() => {
     // 先通过样本切片关联的任务名找到任务
     const layerSamples = display.samples.filter(
       (s) => s.fromLayer === layerName,
@@ -722,15 +730,62 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
         t.layers.some((l) => l.name === layerName),
       );
     }
-    if (!targetTask) return { annotations: [], taskName: '' };
+    if (!targetTask) {
+      return { annotations: [], taskId: '', taskName: '' };
+    }
     const targetLayer = targetTask.layers.find(
       (l) => l.name === layerName,
     );
     return {
       annotations: (targetLayer?.annotations || []).slice(),
+      taskId: targetTask.id,
       taskName: targetTask.name,
     };
   }, [tasks, display.samples, layerName]);
+
+  // 删除单个标注
+  const handleDelete = (annotationId: string) => {
+    if (!taskId) return;
+    if (!confirm('确定删除该标注？此操作不可撤销。')) return;
+    annotationTaskStore.set((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              layers: t.layers.map((l) =>
+                l.name === layerName
+                  ? {
+                      ...l,
+                      annotated: (l.annotations || []).filter(
+                        (a) => a.id !== annotationId,
+                      ).length > 0,
+                      annotations: (l.annotations || []).filter(
+                        (a) => a.id !== annotationId,
+                      ),
+                    }
+                  : l,
+              ),
+            }
+          : t,
+      ),
+    );
+  };
+
+  // 跳转到样本解译工作台并定位到该图层
+  const handleEdit = (annotation: AnnotationItem) => {
+    if (!taskId) {
+      alert('未找到对应的标注项目，无法跳转');
+      return;
+    }
+    const targetTask = tasks.find((t) => t.id === taskId);
+    if (!targetTask) return;
+    const layerIdx = targetTask.layers.findIndex((l) => l.name === layerName);
+    if (layerIdx < 0) {
+      alert('未找到对应图层，无法跳转');
+      return;
+    }
+    onJumpToAnnotation?.(taskId, layerIdx);
+  };
 
   return (
     <div className="h-full bg-gray-50 flex flex-col overflow-y-auto">
@@ -775,6 +830,9 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                   <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs w-12 whitespace-nowrap">
                     #
                   </th>
+                  <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs w-20 whitespace-nowrap">
+                    缩略图
+                  </th>
                   <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs whitespace-nowrap">
                     标注名称
                   </th>
@@ -793,6 +851,9 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                   <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
                     高度
                   </th>
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap w-32">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -803,6 +864,26 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                   >
                     <td className="py-2.5 px-4 text-gray-400 text-xs whitespace-nowrap">
                       {idx + 1}
+                    </td>
+                    <td className="py-2.5 px-4 whitespace-nowrap">
+                      <button
+                        onClick={() => setPreviewing(a)}
+                        title="点击放大查看"
+                        className="w-12 h-9 rounded border border-gray-200 hover:border-blue-500 transition-colors flex items-center justify-center relative overflow-hidden"
+                        style={{ backgroundColor: `${a.color}22` }}
+                      >
+                        <div
+                          className="absolute border"
+                          style={{
+                            left: `${a.xPercent}%`,
+                            top: `${a.yPercent}%`,
+                            width: `${a.wPercent}%`,
+                            height: `${a.hPercent}%`,
+                            borderColor: a.color,
+                            backgroundColor: `${a.color}55`,
+                          }}
+                        />
+                      </button>
                     </td>
                     <td className="py-2.5 px-4 text-gray-700 text-xs whitespace-nowrap font-medium">
                       {a.displayName}
@@ -828,6 +909,24 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                     <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
                       {a.hPercent.toFixed(2)}%
                     </td>
+                    <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-3 text-xs">
+                        <button
+                          onClick={() => handleEdit(a)}
+                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1 whitespace-nowrap"
+                          title="跳转到样本解译工作台该图层"
+                        >
+                          <Edit2 size={12} /> 编辑
+                        </button>
+                        <button
+                          onClick={() => handleDelete(a.id)}
+                          className="text-red-500 hover:text-red-700 flex items-center gap-1 whitespace-nowrap"
+                          title="删除该标注"
+                        >
+                          <Trash2 size={12} /> 删除
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -835,6 +934,100 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* 缩略图放大查看弹窗 */}
+      {previewing && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+          onClick={() => setPreviewing(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-2xl w-[720px] max-w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+              <div className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded-sm flex-shrink-0"
+                  style={{ backgroundColor: previewing.color }}
+                />
+                <span>{previewing.displayName}</span>
+                <span className="text-gray-400 text-xs">· {previewing.labelName}</span>
+              </div>
+              <button
+                onClick={() => setPreviewing(null)}
+                className="text-gray-400 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-5 bg-gray-50">
+              <div
+                className="w-full relative bg-white border border-gray-200 rounded overflow-hidden"
+                style={{ aspectRatio: '16 / 9' }}
+              >
+                {/* 模拟图层背景网格 */}
+                <div
+                  className="absolute inset-0 opacity-30 pointer-events-none"
+                  style={{
+                    backgroundImage:
+                      'repeating-linear-gradient(0deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 40px), repeating-linear-gradient(90deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 40px)',
+                  }}
+                />
+                {/* 标注框 */}
+                <div
+                  className="absolute border-2"
+                  style={{
+                    left: `${previewing.xPercent}%`,
+                    top: `${previewing.yPercent}%`,
+                    width: `${previewing.wPercent}%`,
+                    height: `${previewing.hPercent}%`,
+                    borderColor: previewing.color,
+                    backgroundColor: `${previewing.color}22`,
+                  }}
+                >
+                  <div
+                    className="absolute -top-6 left-0 text-xs font-medium whitespace-nowrap px-1.5 py-0.5 rounded text-white"
+                    style={{ backgroundColor: previewing.color }}
+                  >
+                    {previewing.displayName}
+                  </div>
+                </div>
+                {/* 图层名 */}
+                <div className="absolute top-3 left-3 bg-white/90 px-2.5 py-1 rounded border border-gray-200 text-xs text-gray-600">
+                  {layerName}
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-gray-200 grid grid-cols-4 gap-3 text-xs">
+              <div>
+                <div className="text-gray-400 mb-0.5">X 位置</div>
+                <div className="text-gray-700 font-medium">
+                  {previewing.xPercent.toFixed(2)}%
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-400 mb-0.5">Y 位置</div>
+                <div className="text-gray-700 font-medium">
+                  {previewing.yPercent.toFixed(2)}%
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-400 mb-0.5">宽度</div>
+                <div className="text-gray-700 font-medium">
+                  {previewing.wPercent.toFixed(2)}%
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-400 mb-0.5">高度</div>
+                <div className="text-gray-700 font-medium">
+                  {previewing.hPercent.toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
