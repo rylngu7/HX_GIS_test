@@ -22,6 +22,8 @@ const Header: React.FC<HeaderProps> = ({ activeNav = '数据管理', onNavChange
     '系统管理'
   ];
 
+  const enabledNavItems = ['数据管理', '模型计算'];
+
   const handleNavClick = (item: string, e: React.MouseEvent) => {
     e.preventDefault();
     if (!enabledNavItems.includes(item)) return;
