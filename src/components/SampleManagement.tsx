@@ -684,7 +684,7 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
 };
 
 // ==============================================================
-// 三级页面：图层详情（样本集概览 + 该图层下的样本切片）
+// 三级页面：图层详情（直接展示该图层下的所有标注信息）
 // ==============================================================
 
 interface LayerDetailViewProps {
@@ -705,22 +705,32 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
   );
   const display = liveCategory || category;
 
-  // 过滤出属于该图层的样本
-  const layerSamples = display.samples.filter((s) => s.fromLayer === layerName);
-  const { positive, negative } = countPositiveNegative(layerSamples, display.name);
-  const positiveRatio =
-    layerSamples.length > 0
-      ? ((positive / layerSamples.length) * 100).toFixed(2)
-      : '0.00';
-
-  // 计算该图层的标注数
-  const annotCount = useMemo(() => {
-    const taskName = layerSamples.length > 0 ? layerSamples[0].fromTask : '';
-    const task = tasks.find((t) => t.name === taskName);
-    if (!task) return 0;
-    const layer = task.layers.find((l) => l.name === layerName);
-    return (layer?.annotations || []).length;
-  }, [tasks, layerName, layerSamples]);
+  // 从关联任务中找出该图层下的所有标注
+  const { annotations, taskName } = useMemo(() => {
+    // 先通过样本切片关联的任务名找到任务
+    const layerSamples = display.samples.filter(
+      (s) => s.fromLayer === layerName,
+    );
+    const candidateTaskName =
+      layerSamples.length > 0 ? layerSamples[0].fromTask : '';
+    let targetTask: AnnotationTask | undefined = tasks.find(
+      (t) => t.name === candidateTaskName,
+    );
+    // 如果按样本切片找不着，则遍历所有任务找到同名图层
+    if (!targetTask) {
+      targetTask = tasks.find((t) =>
+        t.layers.some((l) => l.name === layerName),
+      );
+    }
+    if (!targetTask) return { annotations: [], taskName: '' };
+    const targetLayer = targetTask.layers.find(
+      (l) => l.name === layerName,
+    );
+    return {
+      annotations: (targetLayer?.annotations || []).slice(),
+      taskName: targetTask.name,
+    };
+  }, [tasks, display.samples, layerName]);
 
   return (
     <div className="h-full bg-gray-50 flex flex-col overflow-y-auto">
@@ -736,50 +746,93 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
         <span className="text-sm font-semibold text-gray-800">
           {display.name} / {layerName}
         </span>
+        {taskName && (
+          <span className="text-xs text-gray-400 ml-auto">
+            来源标注项目：{taskName}
+          </span>
+        )}
       </div>
 
-      {/* 样本集概览（更紧凑 6 字段） */}
+      {/* 该图层下的标注信息列表 */}
       <div className="p-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm font-medium text-gray-700 mb-3">样本集概览</div>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            <div className="bg-blue-50 border border-blue-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">切片数</div>
-              <div className="text-lg font-semibold text-blue-700">
-                {layerSamples.length}
-              </div>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <div className="text-sm font-medium text-gray-700">
+              该图层下的标注信息
             </div>
-            <div className="bg-green-50 border border-green-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">正负样本数</div>
-              <div className="text-base font-semibold text-green-700">
-                <span>{positive}</span>
-                <span className="text-gray-400 text-sm mx-0.5">/</span>
-                <span className="text-red-500 text-sm">{negative}</span>
-              </div>
-            </div>
-            <div className="bg-purple-50 border border-purple-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">正样本比例</div>
-              <div className="text-lg font-semibold text-purple-700">
-                {positiveRatio}%
-              </div>
-            </div>
-            <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">标注数</div>
-              <div className="text-lg font-semibold text-amber-700">{annotCount}</div>
-            </div>
-            <div className="bg-gray-50 border border-gray-200 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">创建日期</div>
-              <div className="text-xs font-medium text-gray-700 pt-1.5">
-                {display.createdAt}
-              </div>
-            </div>
-            <div className="bg-gray-50 border border-gray-200 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">更新日期</div>
-              <div className="text-xs font-medium text-gray-700 pt-1.5">
-                {display.updatedAt}
-              </div>
+            <div className="text-xs text-gray-500">
+              共 {annotations.length} 条
             </div>
           </div>
+          {annotations.length === 0 ? (
+            <div className="text-xs text-gray-400 py-12 text-center">
+              该图层下暂无标注信息
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs w-12 whitespace-nowrap">
+                    #
+                  </th>
+                  <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs whitespace-nowrap">
+                    标注名称
+                  </th>
+                  <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs whitespace-nowrap">
+                    标签
+                  </th>
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
+                    X 位置
+                  </th>
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
+                    Y 位置
+                  </th>
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
+                    宽度
+                  </th>
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
+                    高度
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {annotations.map((a, idx) => (
+                  <tr
+                    key={a.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <td className="py-2.5 px-4 text-gray-400 text-xs whitespace-nowrap">
+                      {idx + 1}
+                    </td>
+                    <td className="py-2.5 px-4 text-gray-700 text-xs whitespace-nowrap font-medium">
+                      {a.displayName}
+                    </td>
+                    <td className="py-2.5 px-4 text-gray-700 text-xs whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className="w-3 h-3 rounded-sm flex-shrink-0"
+                          style={{ backgroundColor: a.color }}
+                        />
+                        <span>{a.labelName}</span>
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
+                      {a.xPercent.toFixed(2)}%
+                    </td>
+                    <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
+                      {a.yPercent.toFixed(2)}%
+                    </td>
+                    <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
+                      {a.wPercent.toFixed(2)}%
+                    </td>
+                    <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
+                      {a.hPercent.toFixed(2)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
