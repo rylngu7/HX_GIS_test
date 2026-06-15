@@ -999,32 +999,6 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                 </div>
               </div>
             </div>
-            <div className="px-5 py-3 border-t border-gray-200 grid grid-cols-4 gap-3 text-xs">
-              <div>
-                <div className="text-gray-400 mb-0.5">X 位置</div>
-                <div className="text-gray-700 font-medium">
-                  {previewing.xPercent.toFixed(2)}%
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-400 mb-0.5">Y 位置</div>
-                <div className="text-gray-700 font-medium">
-                  {previewing.yPercent.toFixed(2)}%
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-400 mb-0.5">宽度</div>
-                <div className="text-gray-700 font-medium">
-                  {previewing.wPercent.toFixed(2)}%
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-400 mb-0.5">高度</div>
-                <div className="text-gray-700 font-medium">
-                  {previewing.hPercent.toFixed(2)}%
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
