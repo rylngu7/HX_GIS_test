@@ -91,51 +91,72 @@ const SampleManagement: React.FC = () => {
     categoriesToExport: SampleCategory[],
   ) => {
     if (categoriesToExport.length === 0) {
-      setExportMsg('请至少选择一个样本类别');
+      setExportMsg('请至少选择一个样本集');
       return;
     }
 
-    const rows: { 原始图: string; 切片名称: string; '标注信息（json格式）': string }[] = [];
+    // 检查是否已执行切片（简化模拟：必须每个样本集都有样本才能导出）
+    const notReady = categoriesToExport.filter((c) => c.samples.length === 0);
+    if (notReady.length > 0) {
+      setExportMsg('存在尚未执行切片的样本集，无法导出');
+      return;
+    }
+
+    const rows: { 原始图: string; 切片名称: string; '标注信息（GeoJSON格式）': string }[] = [];
     for (const c of categoriesToExport) {
       for (const s of c.samples) {
-        const annotationJson = JSON.stringify({
-          category: c.name,
-          categoryColor: c.color,
-          sampleName: s.name,
-          task: s.fromTask,
-          dataset: s.fromTask,
-          layer: s.fromLayer,
-          label: s.fromLabel,
-          extractedAt: s.extractedAt,
-          annotations: [
+        const geoJson = JSON.stringify({
+          type: 'FeatureCollection',
+          features: [
             {
-              type: 'bbox',
-              label: s.fromLabel,
-              color: c.color,
+              type: 'Feature',
+              properties: {
+                sampleSet: c.name,
+                sampleSetColor: c.color,
+                sampleName: s.name,
+                task: s.fromTask,
+                dataset: s.fromTask,
+                layer: s.fromLayer,
+                label: s.fromLabel,
+                extractedAt: s.extractedAt,
+                labelColor: c.color,
+              },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [
+                  [
+                    [0, 0],
+                    [1, 0],
+                    [1, 1],
+                    [0, 1],
+                    [0, 0],
+                  ],
+                ],
+              },
             },
           ],
         });
         rows.push({
           原始图: `${s.fromTask}/${s.fromLayer}`,
           切片名称: s.name || s.fromLabel,
-          '标注信息（json格式）': annotationJson,
+          '标注信息（GeoJSON格式）': geoJson,
         });
       }
     }
 
     if (rows.length === 0) {
-      setExportMsg('所选类别中没有样本切片，无法导出');
+      setExportMsg('所选样本集中没有样本切片，无法导出');
       return;
     }
 
     try {
       const ws = XLSX.utils.json_to_sheet(rows);
-      ws['!cols'] = [{ wch: 40 }, { wch: 16 }, { wch: 80 }];
+      ws['!cols'] = [{ wch: 40 }, { wch: 16 }, { wch: 100 }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '样本导出');
       const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      XLSX.writeFile(wb, `样本导出_${categoriesToExport.length}个类别_${ts}.xlsx`);
-      setExportMsg(`✓ 导出成功：共 ${rows.length} 个样本切片`);
+      XLSX.writeFile(wb, `样本导出_${categoriesToExport.length}个样本集_${ts}.xlsx`);
+      setExportMsg(`✓ 导出成功：共 ${rows.length} 个样本切片（GeoJSON格式）`);
       // 清除选中
       setSelectedCategoryIds(new Set());
     } catch (e) {
@@ -214,7 +235,7 @@ const SampleManagement: React.FC = () => {
             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm"
           >
             <Plus size={16} />
-            <span>新增样本类别</span>
+            <span>新建样本集</span>
           </button>
         </div>
       </div>
@@ -239,7 +260,7 @@ const SampleManagement: React.FC = () => {
                 </button>
               </th>
               <th className="py-3 px-4 text-left font-medium text-gray-700">
-                样本类别
+                样本集
               </th>
               <th className="py-3 px-4 text-center font-medium text-gray-700 w-24">
                 样本数
@@ -261,7 +282,7 @@ const SampleManagement: React.FC = () => {
                 >
                   <Inbox size={40} className="mx-auto mb-3 text-gray-300" />
                   <div className="text-sm">
-                    暂无样本类别，点击右上角「新增样本类别」创建
+                    暂无样本集，点击右上角「新建样本集」创建
                   </div>
                 </td>
               </tr>
@@ -416,6 +437,12 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
   );
   const display = liveCategory || category;
 
+  // ============ 统计信息（概览） ============
+  const totalSamples = display.samples.length;
+  const taskSet = new Set(display.samples.map((s) => s.fromTask));
+  const labelSet = new Set(display.samples.map((s) => s.fromLabel));
+  const layerSet = new Set(display.samples.map((s) => s.fromLayer));
+
   return (
     <div className="h-full bg-gray-50 flex flex-col">
       {/* 顶部 */}
@@ -436,7 +463,7 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
           {display.name}
         </span>
         <span className="text-xs text-gray-500">
-          · 共 {display.samples.length} 个样本切片
+          · 共 {totalSamples} 个样本切片 · 关联 {taskSet.size} 个标注项目 · {labelSet.size} 个标签
         </span>
         <div className="flex-1" />
         <button
@@ -477,12 +504,12 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
               }
             }
             if (newItems.length === 0) {
-              alert('未发现已完成框选的同名标签（请先在「样本解译」中完成标注并保存当前图层）');
+              alert('未发现已完成框选的同名标签（请先在「样本解译」中完成标注并保存当前项目）');
               return;
             }
             if (
               !confirm(
-                `发现 ${newItems.length} 个匹配的标注框，确认全部纳入到「${display.name}」类别？`,
+                `发现 ${newItems.length} 个匹配的标注框，确认全部纳入到「${display.name}」样本集？`,
               )
             ) {
               return;
@@ -516,12 +543,114 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
         </button>
       </div>
 
+      {/* ============ 样本集概览卡片 ============ */}
+      <div className="p-4 pb-2">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium text-gray-700">样本集概览</div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (totalSamples === 0) {
+                    alert('请先通过「自动纳入同名标签」或「从标注任务导入」添加样本切片');
+                    return;
+                  }
+                  alert(`已对 ${totalSamples} 个样本切片执行切片操作（256×256），切片完成后可点击导出`);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs rounded hover:bg-amber-100 border border-amber-200"
+              >
+                <span className="inline-block w-5 h-5 rounded-sm bg-amber-500 text-white text-center leading-5 text-[10px] font-mono">256</span>
+                执行切片
+              </button>
+              <button
+                onClick={() => {
+                  if (totalSamples === 0) {
+                    alert('暂无样本切片，无法导出');
+                    return;
+                  }
+                  alert(`即将导出 ${totalSamples} 个样本切片（GeoJSON格式）`);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+              >
+                <Download size={12} />
+                导出（GeoJSON）
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-blue-50 border border-blue-100 rounded p-3">
+              <div className="text-xs text-gray-500 mb-1">样本切片数</div>
+              <div className="text-2xl font-semibold text-blue-700">
+                {totalSamples}
+              </div>
+            </div>
+            <div className="bg-purple-50 border border-purple-100 rounded p-3">
+              <div className="text-xs text-gray-500 mb-1">关联标注项目</div>
+              <div className="text-2xl font-semibold text-purple-700">
+                {taskSet.size}
+              </div>
+            </div>
+            <div className="bg-green-50 border border-green-100 rounded p-3">
+              <div className="text-xs text-gray-500 mb-1">关联图层数</div>
+              <div className="text-2xl font-semibold text-green-700">
+                {layerSet.size}
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-100 rounded p-3">
+              <div className="text-xs text-gray-500 mb-1">关联标签数</div>
+              <div className="text-2xl font-semibold text-amber-700">
+                {labelSet.size}
+              </div>
+            </div>
+            <div className="bg-gray-50 border border-gray-100 rounded p-3">
+              <div className="text-xs text-gray-500 mb-1">切片规格</div>
+              <div className="text-xl font-semibold text-gray-700">256×256</div>
+            </div>
+          </div>
+          {/* 标签分布条形图 */}
+          {labelSet.size > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="text-xs text-gray-500 mb-2">标签分布</div>
+              <div className="flex flex-wrap gap-2">
+                {[...labelSet].map((lb) => {
+                  const cnt = display.samples.filter(
+                    (s) => s.fromLabel === lb,
+                  ).length;
+                  const pct = totalSamples > 0 ? (cnt / totalSamples) * 100 : 0;
+                  return (
+                    <div
+                      key={lb}
+                      className="flex items-center gap-1.5 bg-gray-50 rounded px-2 py-1"
+                    >
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-sm"
+                        style={{ backgroundColor: display.color }}
+                      />
+                      <span className="text-xs text-gray-600">{lb}</span>
+                      <span className="text-xs font-medium text-gray-700">
+                        {cnt}
+                      </span>
+                      <div className="w-20 h-1.5 bg-gray-200 rounded overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* 样本切片网格 */}
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 p-4 pt-2 overflow-y-auto">
         {display.samples.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
             <ImageIcon size={60} className="mb-3 text-gray-300" />
-            <div className="text-sm mb-1">该类别下暂无样本切片</div>
+            <div className="text-sm mb-1">该样本集下暂无样本切片</div>
             <div className="text-xs">
               可通过「自动纳入同名标签」或「从标注任务导入」来添加
             </div>
@@ -655,7 +784,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
 
   const confirm = () => {
     if (!name.trim()) {
-      alert('请输入样本类别名称');
+      alert('请输入样本集名称');
       return;
     }
     onSubmit({
@@ -671,7 +800,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   const autoIncludeSameName = () => {
     const targetName = name.trim().toLowerCase();
     if (!targetName) {
-      alert('请先输入类别名称');
+      alert('请先输入样本集名称');
       return;
     }
     const existingKeys = new Set(
@@ -705,7 +834,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       }
     }
     if (newItems.length === 0) {
-      alert('未发现已框选的同名标签。请先在"样本解译"中完成标注并点击"保存当前图层"。');
+      alert('未发现已框选的同名标签。请先在"样本解译"中完成标注并点击"保存当前项目"。');
       return;
     }
     setSamplesDraft([...newItems, ...samplesDraft]);
@@ -748,7 +877,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-[620px] max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
           <h3 className="text-base font-medium text-gray-800">
-            {mode === 'edit' ? '编辑样本类别' : '新增样本类别'}
+            {mode === 'edit' ? '编辑样本集' : '新建样本集'}
           </h3>
           <button
             onClick={onClose}
@@ -762,13 +891,13 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
           {/* 基本信息 */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
-              类别名称 <span className="text-red-500">*</span>
+              样本集名称 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例如：建筑物 / 汽车 / 码头"
+              placeholder="例如：城区建筑物样本集 / 港口车辆样本集"
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>

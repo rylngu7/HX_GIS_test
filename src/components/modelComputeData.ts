@@ -18,6 +18,26 @@ export interface Label {
   color: string;
 }
 
+// -------------------- 标签分组（支持颜色统一管理 + 分级分类） --------------------
+// 一个标签分组 = 一个"大类"（例如：建筑物）
+// 分组下可以有多个子标签（例如：居民楼、写字楼、商场）
+// 子标签可以：(a) 继承/使用分组推荐的颜色系，或者 (b) 手动自定义颜色
+
+export interface SubLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface LabelGroup {
+  id: string;
+  name: string;              // 分组名，例如 "建筑物"
+  themeColor: string;        // 分组主题色（用于推荐的颜色系/一键统一配置）
+  description?: string;
+  updatedAt: string;
+  children: SubLabel[];      // 子标签列表
+}
+
 // 单个标注框（由用户在画布上拖拽绘制）
 export interface AnnotationItem {
   id: string;
@@ -299,6 +319,49 @@ class Store<T> {
 
 export const annotationTaskStore = new Store<AnnotationTask[]>(initialTasks);
 export const sampleCategoryStore = new Store<SampleCategory[]>(initialCategories);
+
+// -------------------- 初始标签分组（建筑物等 --------------------
+
+const initialLabelGroups: LabelGroup[] = [
+  {
+    id: genId(),
+    name: '建筑物',
+    themeColor: '#3B82F6',
+    description: '建筑物相关子标签',
+    updatedAt: nowStr(),
+    children: [
+      { id: genId(), name: '居民楼', color: '#3B82F6' },
+      { id: genId(), name: '写字楼', color: '#2563EB' },
+      { id: genId(), name: '商场', color: '#1D4ED8' },
+    ],
+  },
+  {
+    id: genId(),
+    name: '码头设施',
+    themeColor: '#10B981',
+    description: '港口、码头相关设施',
+    updatedAt: nowStr(),
+    children: [
+      { id: genId(), name: '集装箱', color: '#10B981' },
+      { id: genId(), name: '起重机', color: '#059669' },
+      { id: genId(), name: '泊位', color: '#047857' },
+    ],
+  },
+  {
+    id: genId(),
+    name: '交通车辆',
+    themeColor: '#EF4444',
+    description: '各类车辆',
+    updatedAt: nowStr(),
+    children: [
+      { id: genId(), name: '小型车', color: '#EF4444' },
+      { id: genId(), name: '货车', color: '#DC2626' },
+      { id: genId(), name: '巴士', color: '#B91C1C' },
+    ],
+  },
+];
+
+export const labelGroupStore = new Store<LabelGroup[]>(initialLabelGroups);
 
 // 数据目录 store（标准库 & 融合库可动态增删）
 export const standardLibraryStore = new Store<DataCatalogEntry[]>(STANDARD_LIBRARY);

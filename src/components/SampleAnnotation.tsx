@@ -738,7 +738,7 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
               className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
             >
               <Save size={14} />
-              <span>保存当前图层</span>
+              <span>保存当前项目</span>
             </button>
             {allAnnotated && (
               <button
@@ -939,7 +939,7 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
                 active={activeTool === 'box'}
                 onClick={() => handleToolSelect('box')}
                 icon={<Square size={16} />}
-                label="框选"
+                label="矩形"
               />
               <ToolButton
                 active={activeTool === 'polygon'}

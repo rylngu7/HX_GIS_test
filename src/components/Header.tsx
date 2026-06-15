@@ -22,8 +22,6 @@ const Header: React.FC<HeaderProps> = ({ activeNav = '数据管理', onNavChange
     '系统管理'
   ];
 
-  const enabledNavItems = ['数据管理', '模型计算'];
-
   const handleNavClick = (item: string, e: React.MouseEvent) => {
     e.preventDefault();
     if (!enabledNavItems.includes(item)) return;
@@ -38,6 +36,7 @@ const Header: React.FC<HeaderProps> = ({ activeNav = '数据管理', onNavChange
         <div className="text-2xl font-bold tracking-tight">CSTI</div>
         <nav className="flex gap-1">
           {navItems.map((item) => {
+            const displayName = item === '模型计算' ? '样本标注' : item;
             const isEnabled = enabledNavItems.includes(item);
             const isActive = activeNav === item;
             return (
@@ -53,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({ activeNav = '数据管理', onNavChange
                       : 'text-white/50 cursor-not-allowed'
                 }`}
               >
-                {item}
+                {displayName}
               </a>
             );
           })}
