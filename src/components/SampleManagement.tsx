@@ -27,9 +27,7 @@ import {
 } from './modelComputeData';
 
 // ---------- 工具函数：计算正负样本 ----------
-const countPositiveNegative = (samples: SampleItem[], categoryName: string) => {
-  // 正样本：fromLabel 不包含"背景/"
-  // 负样本：fromLabel 包含"背景/"
+const countPositiveNegative = (samples: SampleItem[], _categoryName: string) => {
   const positive = samples.filter((s) => !s.fromLabel.startsWith('背景/')).length;
   const negative = samples.length - positive;
   return { positive, negative, total: samples.length };
@@ -37,7 +35,6 @@ const countPositiveNegative = (samples: SampleItem[], categoryName: string) => {
 
 // ---------- 工具函数：计算关联任务的标注总数 ----------
 const countAnnotationsForCategory = (category: SampleCategory, tasks: AnnotationTask[]) => {
-  // 找出关联的任务名（从样本的 fromTask 中收集）
   const taskNames = new Set(category.samples.map((s) => s.fromTask));
   let total = 0;
   for (const task of tasks) {
@@ -52,14 +49,19 @@ const countAnnotationsForCategory = (category: SampleCategory, tasks: Annotation
 
 // ---------- 工具函数：按图层统计样本 ----------
 const buildLayerStats = (category: SampleCategory, tasks: AnnotationTask[]) => {
-  // 从样本的 fromLayer 中按图层聚合
-  const layerMap = new Map<string, { slices: number; annotated: number; taskName: string }>();
+  const layerMap = new Map<
+    string,
+    { slices: number; annotated: number; taskName: string }
+  >();
   for (const s of category.samples) {
-    const existing = layerMap.get(s.fromLayer) || { slices: 0, annotated: 0, taskName: s.fromTask };
+    const existing = layerMap.get(s.fromLayer) || {
+      slices: 0,
+      annotated: 0,
+      taskName: s.fromTask,
+    };
     existing.slices += 1;
     layerMap.set(s.fromLayer, existing);
   }
-  // 补充标注数：从任务的图层中查
   for (const task of tasks) {
     for (const layer of task.layers) {
       const key = layer.name;
@@ -73,7 +75,7 @@ const buildLayerStats = (category: SampleCategory, tasks: AnnotationTask[]) => {
 };
 
 // ==============================================================
-// 样本管理
+// 样本管理主入口
 // ==============================================================
 
 const SampleManagement: React.FC = () => {
@@ -81,19 +83,19 @@ const SampleManagement: React.FC = () => {
   const tasks = useStore(annotationTaskStore);
 
   const [searchQuery, setSearchQuery] = useState('');
+  // 导航状态：null = 一级列表；string = 二级类别详情；{ categoryId, layerName } = 三级图层详情
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [activeLayerName, setActiveLayerName] = useState<string | null>(null);
   const [categoryModal, setCategoryModal] = useState<
     | { mode: 'create'; initial?: SampleCategory }
     | { mode: 'edit'; initial: SampleCategory }
     | null
   >(null);
 
-  // 多选状态
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(
     new Set(),
   );
 
-  // 导出反馈
   const [exportMsg, setExportMsg] = useState<string>('');
   const exportMsgTimerRef = React.useRef<number | null>(null);
 
@@ -147,9 +149,7 @@ const SampleManagement: React.FC = () => {
   };
 
   // 导出
-  const safeExport = (
-    categoriesToExport: SampleCategory[],
-  ) => {
+  const safeExport = (categoriesToExport: SampleCategory[]) => {
     if (categoriesToExport.length === 0) {
       showExportMsg('请至少选择一个样本集');
       return;
@@ -159,24 +159,39 @@ const SampleManagement: React.FC = () => {
       showExportMsg('存在暂无样本切片的样本集，无法导出');
       return;
     }
-    const rows: { 原始图: string; 切片名称: string; '标注信息（GeoJSON格式）': string }[] = [];
+    // 切片前导出按钮置灰：只有 isSliced 为 true 的样本集才可导出
+    const notSliced = categoriesToExport.filter((c) => !c.isSliced);
+    if (notSliced.length > 0) {
+      showExportMsg('请先执行切片后再导出');
+      return;
+    }
+    const rows: {
+      原始图: string;
+      切片名称: string;
+      '标注信息（GeoJSON格式）': string;
+    }[] = [];
     for (const c of categoriesToExport) {
       for (const s of c.samples) {
         const geoJson = JSON.stringify({
           type: 'FeatureCollection',
-          features: [{
-            type: 'Feature',
-            properties: {
-              sampleSet: c.name,
-              sampleName: s.name,
-              task: s.fromTask,
-              dataset: s.fromTask,
-              layer: s.fromLayer,
-              label: s.fromLabel,
-              extractedAt: s.extractedAt,
+          features: [
+            {
+              type: 'Feature',
+              properties: {
+                sampleSet: c.name,
+                sampleName: s.name,
+                task: s.fromTask,
+                dataset: s.fromTask,
+                layer: s.fromLayer,
+                label: s.fromLabel,
+                extractedAt: s.extractedAt,
+              },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+              },
             },
-            geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] },
-          }],
+          ],
         });
         rows.push({
           原始图: `${s.fromTask}/${s.fromLayer}`,
@@ -198,31 +213,60 @@ const SampleManagement: React.FC = () => {
       XLSX.writeFile(wb, `样本导出_${categoriesToExport.length}个样本集_${ts}.xlsx`);
       showExportMsg(`✓ 导出成功：共 ${rows.length} 个样本切片（GeoJSON格式）`);
       setSelectedCategoryIds(new Set());
-    } catch (e) {
+    } catch {
       showExportMsg('导出失败，请重试');
     }
   };
 
-  // 详情视图
-  if (activeCategory) {
+  // ---------- 执行切片 ----------
+  const handleSlice = (category: SampleCategory) => {
+    if (category.samples.length === 0) {
+      showExportMsg('该样本集下暂无样本切片，无法执行切片', 2500);
+      return;
+    }
+    sampleCategoryStore.set((prev) =>
+      prev.map((c) =>
+        c.id === category.id
+          ? { ...c, isSliced: true, updatedAt: nowStr() }
+          : c,
+      ),
+    );
+    showExportMsg(`✓ 已对「${category.name}」中 ${category.samples.length} 个样本切片执行切片`, 2500);
+  };
+
+  // ---------- 路由渲染 ----------
+  // 三级页面：图层详情
+  if (activeCategory && activeLayerName) {
     return (
-      <CategoryDetailView
+      <LayerDetailView
         category={activeCategory}
-        onBack={() => setActiveCategoryId(null)}
+        layerName={activeLayerName}
+        onBackToCategory={() => setActiveLayerName(null)}
         tasks={tasks}
       />
     );
   }
 
+  // 二级页面：类别详情
+  if (activeCategory) {
+    return (
+      <CategoryDetailView
+        category={activeCategory}
+        onBack={() => setActiveCategoryId(null)}
+        onLayerClick={(layerName) => setActiveLayerName(layerName)}
+        tasks={tasks}
+      />
+    );
+  }
+
+  // 一级页面：样本集列表
   return (
     <div className="h-full bg-gray-50 p-4 flex flex-col relative">
-      {/* 导出反馈 toast */}
       {exportMsg && (
         <div className="absolute top-4 right-4 z-50 px-4 py-2 bg-blue-600 text-white text-sm rounded shadow-lg shadow-blue-200/50">
           {exportMsg}
         </div>
       )}
-      {/* 顶部操作栏 */}
       <div className="flex items-center justify-between mb-4">
         <div className="relative w-72">
           <Search
@@ -261,7 +305,6 @@ const SampleManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* 主体：表格 */}
       <div className="flex-1 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -295,7 +338,7 @@ const SampleManagement: React.FC = () => {
               <th className="py-3 px-4 text-center font-medium text-gray-700 w-44">
                 最后更新时间
               </th>
-              <th className="py-3 px-4 text-center font-medium text-gray-700 w-56">
+              <th className="py-3 px-4 text-center font-medium text-gray-700 w-60">
                 操作
               </th>
             </tr>
@@ -303,10 +346,7 @@ const SampleManagement: React.FC = () => {
           <tbody>
             {filteredCategories.length === 0 && (
               <tr>
-                <td
-                  colSpan={7}
-                  className="py-16 text-center text-gray-400"
-                >
+                <td colSpan={7} className="py-16 text-center text-gray-400">
                   <ImageIcon size={40} className="mx-auto mb-3 text-gray-300" />
                   <div className="text-sm">暂无样本集，点击右上角「新建样本集」创建</div>
                 </td>
@@ -370,16 +410,7 @@ const SampleManagement: React.FC = () => {
                         <Edit2 size={12} /> 编辑
                       </button>
                       <button
-                        onClick={() => {
-                          if (c.samples.length === 0) {
-                            showExportMsg('该样本集下暂无样本切片，无法执行切片', 2500);
-                            return;
-                          }
-                          showExportMsg(
-                            `✓ 已对「${c.name}」中 ${c.samples.length} 个样本切片执行切片`,
-                            2500,
-                          );
-                        }}
+                        onClick={() => handleSlice(c)}
                         className="text-amber-600 hover:text-amber-800 flex items-center gap-1"
                         title="执行切片"
                       >
@@ -387,8 +418,13 @@ const SampleManagement: React.FC = () => {
                       </button>
                       <button
                         onClick={() => safeExport([c])}
-                        className="text-green-600 hover:text-green-800 flex items-center gap-1"
-                        title="导出 GeoJSON 格式"
+                        disabled={!c.isSliced}
+                        className={`flex items-center gap-1 ${
+                          c.isSliced
+                            ? 'text-green-600 hover:text-green-800'
+                            : 'text-gray-400 cursor-not-allowed'
+                        }`}
+                        title={c.isSliced ? '导出 GeoJSON 格式' : '请先执行切片'}
                       >
                         <Download size={12} /> 导出
                       </button>
@@ -418,7 +454,6 @@ const SampleManagement: React.FC = () => {
         </table>
       </div>
 
-      {/* 新增/编辑弹窗 */}
       {categoryModal && (
         <CategoryFormModal
           mode={categoryModal.mode}
@@ -434,6 +469,7 @@ const SampleManagement: React.FC = () => {
                 description: data.description || undefined,
                 createdAt: nowStr(),
                 updatedAt: nowStr(),
+                isSliced: false,
                 samples: data.samples || [],
               };
               sampleCategoryStore.set((prev) => [newCategory, ...prev]);
@@ -464,32 +500,28 @@ const SampleManagement: React.FC = () => {
 export default SampleManagement;
 
 // ==============================================================
-// 类别详情视图（重构）
+// 二级页面：样本集详情（不含概览，图层点击可进入三级页）
 // ==============================================================
 
 interface CategoryDetailViewProps {
   category: SampleCategory;
   onBack: () => void;
+  onLayerClick: (layerName: string) => void;
   tasks: AnnotationTask[];
 }
 
 const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
   category,
   onBack,
+  onLayerClick,
   tasks,
 }) => {
   const liveCategory = useStore(sampleCategoryStore).find(
     (c) => c.id === category.id,
   );
   const display = liveCategory || category;
-
-  // 统计信息
   const totalSamples = display.samples.length;
-  const { positive, negative } = countPositiveNegative(display.samples, display.name);
-  const positiveRatio =
-    totalSamples > 0 ? ((positive / totalSamples) * 100).toFixed(2) : '0.00';
 
-  // 按图层统计
   const layerStats = useMemo(
     () => buildLayerStats(display, tasks),
     [display, tasks],
@@ -497,7 +529,6 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
 
   return (
     <div className="h-full bg-gray-50 flex flex-col overflow-y-auto">
-      {/* 顶部 */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
         <button
           onClick={onBack}
@@ -509,53 +540,14 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
         <span className="text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-800">{display.name}</span>
         {display.description && (
-          <span className="text-xs text-gray-500 truncate max-w-md">· {display.description}</span>
+          <span className="text-xs text-gray-500 truncate max-w-md">
+            · {display.description}
+          </span>
         )}
       </div>
 
-      {/* ========== 区域1：样本集概览 ========== */}
-      <div className="p-4 pb-2">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm font-medium text-gray-700 mb-3">样本集概览</div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="bg-blue-50 border border-blue-100 rounded p-3">
-              <div className="text-xs text-gray-500 mb-1">切片数</div>
-              <div className="text-2xl font-semibold text-blue-700">
-                {totalSamples}
-              </div>
-            </div>
-            <div className="bg-green-50 border border-green-100 rounded p-3">
-              <div className="text-xs text-gray-500 mb-1">正负样本数</div>
-              <div className="text-2xl font-semibold text-green-700">
-                <span>{positive}</span>
-                <span className="text-gray-400 text-lg mx-1">/</span>
-                <span className="text-red-500 text-xl">{negative}</span>
-              </div>
-            </div>
-            <div className="bg-purple-50 border border-purple-100 rounded p-3">
-              <div className="text-xs text-gray-500 mb-1">正样本比例</div>
-              <div className="text-2xl font-semibold text-purple-700">
-                {positiveRatio}%
-              </div>
-            </div>
-            <div className="bg-gray-50 border border-gray-100 rounded p-3">
-              <div className="text-xs text-gray-500 mb-1">创建日期</div>
-              <div className="text-sm font-medium text-gray-700 pt-1.5">
-                {display.createdAt}
-              </div>
-            </div>
-            <div className="bg-gray-50 border border-gray-100 rounded p-3">
-              <div className="text-xs text-gray-500 mb-1">更新日期</div>
-              <div className="text-sm font-medium text-gray-700 pt-1.5">
-                {display.updatedAt}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========== 区域2：图层统计表 ========== */}
-      <div className="px-4 pb-2">
+      {/* 图层统计表（可点击进入三级页） */}
+      <div className="px-4 pt-4 pb-2">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-700">
             图层切片情况
@@ -594,16 +586,19 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                   return (
                     <tr
                       key={ls.name}
-                      className="border-b border-gray-100 hover:bg-gray-50"
+                      className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
                     >
                       <td className="py-2.5 px-4 text-gray-400 text-xs">
                         {idx + 1}
                       </td>
                       <td className="py-2.5 px-4 text-gray-700 text-xs">
-                        <span className="flex items-center gap-1.5">
-                          <Folder size={12} className="text-gray-400 flex-shrink-0" />
+                        <button
+                          onClick={() => onLayerClick(ls.name)}
+                          className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >
+                          <Folder size={12} className="flex-shrink-0 text-gray-400" />
                           <span className="truncate">{ls.name}</span>
-                        </span>
+                        </button>
                       </td>
                       <td className="py-2.5 px-4 text-gray-600 text-xs">
                         {ls.taskName}
@@ -634,7 +629,7 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
         </div>
       </div>
 
-      {/* ========== 样本切片卡片 ========== */}
+      {/* 样本切片卡片 */}
       <div className="p-4 pt-2">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="text-sm font-medium text-gray-700 mb-3">
@@ -714,7 +709,186 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
 };
 
 // ==============================================================
-// 新增/编辑样本类别弹窗（简化版，去除自动纳入同名标签）
+// 三级页面：图层详情（样本集概览 + 该图层下的样本切片）
+// ==============================================================
+
+interface LayerDetailViewProps {
+  category: SampleCategory;
+  layerName: string;
+  onBackToCategory: () => void;
+  tasks: AnnotationTask[];
+}
+
+const LayerDetailView: React.FC<LayerDetailViewProps> = ({
+  category,
+  layerName,
+  onBackToCategory,
+  tasks,
+}) => {
+  const liveCategory = useStore(sampleCategoryStore).find(
+    (c) => c.id === category.id,
+  );
+  const display = liveCategory || category;
+
+  // 过滤出属于该图层的样本
+  const layerSamples = display.samples.filter((s) => s.fromLayer === layerName);
+  const { positive, negative } = countPositiveNegative(layerSamples, display.name);
+  const positiveRatio =
+    layerSamples.length > 0
+      ? ((positive / layerSamples.length) * 100).toFixed(2)
+      : '0.00';
+
+  // 计算该图层的标注数
+  const annotCount = useMemo(() => {
+    const taskName = layerSamples.length > 0 ? layerSamples[0].fromTask : '';
+    const task = tasks.find((t) => t.name === taskName);
+    if (!task) return 0;
+    const layer = task.layers.find((l) => l.name === layerName);
+    return (layer?.annotations || []).length;
+  }, [tasks, layerName, layerSamples]);
+
+  return (
+    <div className="h-full bg-gray-50 flex flex-col overflow-y-auto">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={onBackToCategory}
+          className="flex items-center gap-1 text-gray-600 hover:text-gray-800 text-sm"
+        >
+          <ChevronLeft size={18} />
+          <span>返回样本集详情</span>
+        </button>
+        <span className="text-gray-300">|</span>
+        <span className="text-sm font-semibold text-gray-800">
+          {display.name} / {layerName}
+        </span>
+      </div>
+
+      {/* 区域1：样本集概览（更紧凑 6 字段） */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-sm font-medium text-gray-700 mb-3">样本集概览</div>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <div className="bg-blue-50 border border-blue-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">切片数</div>
+              <div className="text-lg font-semibold text-blue-700">
+                {layerSamples.length}
+              </div>
+            </div>
+            <div className="bg-green-50 border border-green-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">正负样本数</div>
+              <div className="text-base font-semibold text-green-700">
+                <span>{positive}</span>
+                <span className="text-gray-400 text-sm mx-0.5">/</span>
+                <span className="text-red-500 text-sm">{negative}</span>
+              </div>
+            </div>
+            <div className="bg-purple-50 border border-purple-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">正样本比例</div>
+              <div className="text-lg font-semibold text-purple-700">
+                {positiveRatio}%
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">标注数</div>
+              <div className="text-lg font-semibold text-amber-700">{annotCount}</div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">创建日期</div>
+              <div className="text-xs font-medium text-gray-700 pt-1.5">
+                {display.createdAt}
+              </div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">更新日期</div>
+              <div className="text-xs font-medium text-gray-700 pt-1.5">
+                {display.updatedAt}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 区域2：该图层下的样本切片 */}
+      <div className="px-4 pb-4 pt-2">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-sm font-medium text-gray-700 mb-3">
+            该图层下的样本切片
+            <span className="text-xs text-gray-400 ml-2 font-normal">
+              共 {layerSamples.length} 个样本
+            </span>
+          </div>
+          {layerSamples.length === 0 ? (
+            <div className="h-40 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+              <ImageIcon size={40} className="mb-3 text-gray-300" />
+              <div className="text-sm">该图层下暂无样本切片</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {layerSamples.map((s) => {
+                const isPositive = !s.fromLabel.startsWith('背景/');
+                return (
+                  <div
+                    key={s.id}
+                    className="relative bg-white border border-gray-200 rounded-lg overflow-hidden group hover:shadow-md transition-shadow"
+                  >
+                    <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
+                      <ImageIcon size={32} className="text-gray-400" />
+                      <span
+                        className={`absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded text-white ${
+                          isPositive ? 'bg-green-500' : 'bg-red-400'
+                        }`}
+                      >
+                        {isPositive ? '正样本' : '负样本'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (confirm('确定删除该样本切片？')) {
+                            sampleCategoryStore.set((prev) =>
+                              prev.map((c) =>
+                                c.id === display.id
+                                  ? {
+                                      ...c,
+                                      samples: c.samples.filter(
+                                        (x) => x.id !== s.id,
+                                      ),
+                                      updatedAt: nowStr(),
+                                    }
+                                  : c,
+                              ),
+                            );
+                          }
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-white rounded shadow-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                    <div className="p-2 text-xs">
+                      <div className="font-medium text-gray-800 truncate mb-1" title={s.name}>
+                        {s.name}
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-500 truncate">
+                        <Tag size={10} className="flex-shrink-0" />
+                        <span className="truncate">{s.fromLabel}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-400 text-[11px] mt-1 truncate">
+                        <Folder size={10} className="flex-shrink-0" />
+                        <span className="truncate">{s.fromTask}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==============================================================
+// 新增/编辑样本类别弹窗
 // ==============================================================
 
 interface CategoryFormModalProps {
@@ -744,7 +918,6 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     initial?.samples || [],
   );
 
-  // 手动新增弹窗的三级选择状态
   const [manualDialog, setManualDialog] = useState(false);
   const [selTaskId, setSelTaskId] = useState<string>(tasks[0]?.id || '');
   const [selLayer, setSelLayer] = useState<string>('');
@@ -752,10 +925,12 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
 
   const currentTask = tasks.find((t) => t.id === selTaskId) || null;
 
-  // 从当前任务的已标注框中构建标签列表
   const taskLabels = React.useMemo(() => {
     if (!currentTask) return [];
-    const collected = new Map<string, { id: string; name: string; color: string }>();
+    const collected = new Map<
+      string,
+      { id: string; name: string; color: string }
+    >();
     for (const layer of currentTask.layers) {
       const anns = layer.annotations || [];
       for (const a of anns) {
@@ -771,7 +946,6 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     return Array.from(collected.values());
   }, [currentTask]);
 
-  // 当切换任务时重置图层/标签选择
   React.useEffect(() => {
     if (currentTask && currentTask.layers.length > 0) {
       setSelLayer(currentTask.layers[0].id);
@@ -798,7 +972,6 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     });
   };
 
-  // 手动添加
   const addManual = () => {
     if (!currentTask || !selLayer || !selLabelId) {
       alert('请先选择数据集和标签');
@@ -932,19 +1105,22 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
         </div>
       </div>
 
-      {/* 手动新增 - 三级选择弹窗 */}
       {manualDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-[60]">
           <div className="bg-white rounded-lg shadow-xl w-[460px]">
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
-              <h3 className="text-sm font-medium text-gray-800">按数据集-图层-标签路径新增</h3>
+              <h3 className="text-sm font-medium text-gray-800">
+                按数据集-图层-标签路径新增
+              </h3>
               <button onClick={() => setManualDialog(false)} className="text-gray-400 hover:text-gray-600">
                 <span className="text-sm">✕</span>
               </button>
             </div>
             <div className="px-5 py-4 space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">标注项目</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  标注项目
+                </label>
                 {tasks.length === 0 ? (
                   <div className="text-xs text-gray-400 border border-gray-200 rounded px-3 py-2">
                     暂无标注项目，请先到「样本解译」创建
@@ -956,13 +1132,17 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {tasks.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))}
                   </select>
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">选择图层</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  选择图层
+                </label>
                 {currentTask && currentTask.layers.length > 0 ? (
                   <select
                     value={selLayer}
@@ -982,7 +1162,9 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">标签</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  标签
+                </label>
                 {taskLabels.length > 0 ? (
                   <select
                     value={selLabelId}
@@ -990,7 +1172,9 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {taskLabels.map((lb) => (
-                      <option key={lb.id} value={lb.id}>{lb.name}</option>
+                      <option key={lb.id} value={lb.id}>
+                        {lb.name}
+                      </option>
                     ))}
                   </select>
                 ) : (

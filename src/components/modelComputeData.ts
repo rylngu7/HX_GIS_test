@@ -86,6 +86,7 @@ export interface SampleCategory {
   description?: string;
   createdAt: string;
   updatedAt: string;
+  isSliced: boolean; // 是否已执行切片
   samples: SampleItem[];
 }
 
@@ -803,6 +804,7 @@ const initialCategories: SampleCategory[] = [
     description: '面向城区建筑物轮廓检测的训练样本',
     createdAt: '2024-11-18 10:15:42',
     updatedAt: '2024-11-21 17:30:08',
+    isSliced: true,
     samples: buildBuildingSamples(),
   },
   {
@@ -812,6 +814,7 @@ const initialCategories: SampleCategory[] = [
     description: '面向港口码头、集装箱识别的训练样本',
     createdAt: '2024-11-10 09:12:05',
     updatedAt: '2024-11-19 14:22:17',
+    isSliced: false,
     samples: [],
   },
   {
@@ -821,6 +824,7 @@ const initialCategories: SampleCategory[] = [
     description: '道路、停车场中的车辆样本',
     createdAt: '2024-11-08 16:45:12',
     updatedAt: '2024-11-20 10:08:55',
+    isSliced: false,
     samples: [],
   },
 ];
