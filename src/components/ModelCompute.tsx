@@ -7,7 +7,7 @@ const ModelCompute: React.FC = () => {
   const [activeTab, setActiveTab] = useState('样本解译');
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-1 h-full bg-gray-50">
       <ModelComputeSidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 overflow-hidden">
         {activeTab === '样本解译' && <SampleAnnotation />}
