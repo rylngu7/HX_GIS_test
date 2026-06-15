@@ -585,13 +585,13 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div className="bg-white rounded-lg shadow-xl w-[400px]">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
-        <h3 className="text-base font-medium text-gray-800">完成标注项目</h3>
+        <h3 className="text-base font-medium text-gray-800">完成当前项目</h3>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
           <X size={18} />
         </button>
       </div>
       <div className="px-5 py-4 text-sm text-gray-700">
-        确认将任务「<span className="text-blue-600 font-medium">{task.name}</span>
+        确认将项目「<span className="text-blue-600 font-medium">{task.name}</span>
         」标记为已完成？标记后仍可随时进入继续编辑。
       </div>
       <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200">
@@ -603,7 +603,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
         </button>
         <button
           onClick={onConfirm}
-          className="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+          className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
         >
           确认完成
         </button>
@@ -706,6 +706,25 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
 
   const gotoLayer = (idx: number) => {
     if (idx < 0 || idx >= layers.length) return;
+    // 切到下一张/上一张前，先保存当前图层的标注内容（保证显示对勾）
+    const layerId = layers[currentLayerIdx]?.id;
+    if (layerId) {
+      const anns = annotationsByLayer[layerId] || [];
+      annotationTaskStore.set((prev) =>
+        prev.map((t) =>
+          t.id === task.id
+            ? {
+                ...t,
+                layers: t.layers.map((l) =>
+                  l.id === layerId
+                    ? { ...l, annotated: anns.length > 0, annotations: anns }
+                    : l,
+                ),
+              }
+            : t,
+        ),
+      );
+    }
     setCurrentLayerIdx(idx);
   };
 
@@ -882,20 +901,18 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
           )}
           <div className="flex items-center gap-2">
             <button
+              onClick={onRequestComplete}
+              className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+            >
+              完成当前项目
+            </button>
+            <button
               onClick={handleSave}
               className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
             >
               <Save size={14} />
-              <span>保存当前项目</span>
+              <span>保存当前图层</span>
             </button>
-            {allAnnotated && (
-              <button
-                onClick={onRequestComplete}
-                className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-              >
-                完成任务
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -1172,7 +1189,7 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
                 onClick={onRequestComplete}
                 className="w-full mt-2 px-2 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
               >
-                ✓ 全部标注完成
+                完成当前项目
               </button>
             )}
           </div>

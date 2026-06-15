@@ -399,19 +399,19 @@ const SampleManagement: React.FC = () => {
                   <td className="py-3 px-4 text-center text-gray-600 text-xs">
                     {c.updatedAt}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
                     <div className="flex items-center justify-center gap-3 text-xs">
                       <button
                         onClick={() =>
                           setCategoryModal({ mode: 'edit', initial: c })
                         }
-                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1 whitespace-nowrap"
                       >
                         <Edit2 size={12} /> 编辑
                       </button>
                       <button
                         onClick={() => handleSlice(c)}
-                        className="text-amber-600 hover:text-amber-800 flex items-center gap-1"
+                        className="text-amber-600 hover:text-amber-800 flex items-center gap-1 whitespace-nowrap"
                         title="执行切片"
                       >
                         <Scissors size={12} /> 执行切片
@@ -419,7 +419,7 @@ const SampleManagement: React.FC = () => {
                       <button
                         onClick={() => safeExport([c])}
                         disabled={!c.isSliced}
-                        className={`flex items-center gap-1 ${
+                        className={`flex items-center gap-1 whitespace-nowrap ${
                           c.isSliced
                             ? 'text-green-600 hover:text-green-800'
                             : 'text-gray-400 cursor-not-allowed'
@@ -441,7 +441,7 @@ const SampleManagement: React.FC = () => {
                             });
                           }
                         }}
-                        className="text-red-500 hover:text-red-700 flex items-center gap-1"
+                        className="text-red-500 hover:text-red-700 flex items-center gap-1 whitespace-nowrap"
                       >
                         <Trash2 size={12} /> 删除
                       </button>
@@ -520,7 +520,13 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
     (c) => c.id === category.id,
   );
   const display = liveCategory || category;
+
+  // 样本集概览统计（全局）
   const totalSamples = display.samples.length;
+  const { positive: posAll, negative: negAll } = countPositiveNegative(display.samples, display.name);
+  const posRatioAll =
+    totalSamples > 0 ? ((posAll / totalSamples) * 100).toFixed(2) : '0.00';
+  const annotCountAll = countAnnotationsForCategory(display, tasks);
 
   const layerStats = useMemo(
     () => buildLayerStats(display, tasks),
@@ -546,8 +552,53 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
         )}
       </div>
 
-      {/* 图层统计表（可点击进入三级页） */}
-      <div className="px-4 pt-4 pb-2">
+      {/* 区域1：样本集概览（更紧凑 6 字段，放在图层表格上方） */}
+      <div className="p-4 pb-2">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-sm font-medium text-gray-700 mb-3">样本集概览</div>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <div className="bg-blue-50 border border-blue-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">切片数</div>
+              <div className="text-lg font-semibold text-blue-700">
+                {totalSamples}
+              </div>
+            </div>
+            <div className="bg-green-50 border border-green-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">正负样本数</div>
+              <div className="text-base font-semibold text-green-700">
+                <span>{posAll}</span>
+                <span className="text-gray-400 text-sm mx-0.5">/</span>
+                <span className="text-red-500 text-sm">{negAll}</span>
+              </div>
+            </div>
+            <div className="bg-purple-50 border border-purple-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">正样本比例</div>
+              <div className="text-lg font-semibold text-purple-700">
+                {posRatioAll}%
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">标注数</div>
+              <div className="text-lg font-semibold text-amber-700">{annotCountAll}</div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">创建日期</div>
+              <div className="text-xs font-medium text-gray-700 pt-1.5">
+                {display.createdAt}
+              </div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">更新日期</div>
+              <div className="text-xs font-medium text-gray-700 pt-1.5">
+                {display.updatedAt}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 区域2：图层统计表（可点击进入三级页） */}
+      <div className="px-4 pb-4 pt-2">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-700">
             图层切片情况
@@ -586,12 +637,12 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                   return (
                     <tr
                       key={ls.name}
-                      className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                      className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       <td className="py-2.5 px-4 text-gray-400 text-xs">
                         {idx + 1}
                       </td>
-                      <td className="py-2.5 px-4 text-gray-700 text-xs">
+                      <td className="py-2.5 px-4 text-gray-700 text-xs whitespace-nowrap">
                         <button
                           onClick={() => onLayerClick(ls.name)}
                           className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline font-medium"
@@ -600,16 +651,16 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                           <span className="truncate">{ls.name}</span>
                         </button>
                       </td>
-                      <td className="py-2.5 px-4 text-gray-600 text-xs">
+                      <td className="py-2.5 px-4 text-gray-600 text-xs whitespace-nowrap">
                         {ls.taskName}
                       </td>
-                      <td className="py-2.5 px-4 text-center text-gray-700 text-xs">
+                      <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
                         {ls.annotated}
                       </td>
-                      <td className="py-2.5 px-4 text-center text-gray-700 text-xs font-medium">
+                      <td className="py-2.5 px-4 text-center text-gray-700 text-xs font-medium whitespace-nowrap">
                         {ls.slices}
                       </td>
-                      <td className="py-2.5 px-4 text-center">
+                      <td className="py-2.5 px-4 text-center whitespace-nowrap">
                         {isSliced ? (
                           <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
                             <Check size={11} /> 已切片
@@ -625,82 +676,6 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                 })}
               </tbody>
             </table>
-          )}
-        </div>
-      </div>
-
-      {/* 样本切片卡片 */}
-      <div className="p-4 pt-2">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm font-medium text-gray-700 mb-3">
-            样本切片列表
-            <span className="text-xs text-gray-400 ml-2 font-normal">
-              共 {totalSamples} 个样本
-            </span>
-          </div>
-          {display.samples.length === 0 ? (
-            <div className="h-40 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
-              <ImageIcon size={40} className="mb-3 text-gray-300" />
-              <div className="text-sm">该样本集下暂无样本切片</div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-              {display.samples.map((s) => {
-                const isPositive = !s.fromLabel.startsWith('背景/');
-                return (
-                  <div
-                    key={s.id}
-                    className="relative bg-white border border-gray-200 rounded-lg overflow-hidden group hover:shadow-md transition-shadow"
-                  >
-                    <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
-                      <ImageIcon size={32} className="text-gray-400" />
-                      <span
-                        className={`absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded text-white ${
-                          isPositive ? 'bg-green-500' : 'bg-red-400'
-                        }`}
-                      >
-                        {isPositive ? '正样本' : '负样本'}
-                      </span>
-                      <button
-                        onClick={() => {
-                          if (confirm('确定删除该样本切片？')) {
-                            sampleCategoryStore.set((prev) =>
-                              prev.map((c) =>
-                                c.id === display.id
-                                  ? {
-                                      ...c,
-                                      samples: c.samples.filter(
-                                        (x) => x.id !== s.id,
-                                      ),
-                                      updatedAt: nowStr(),
-                                    }
-                                  : c,
-                              ),
-                            );
-                          }
-                        }}
-                        className="absolute top-2 right-2 p-1 bg-white rounded shadow-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                    <div className="p-2 text-xs">
-                      <div className="font-medium text-gray-800 truncate mb-1" title={s.name}>
-                        {s.name}
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-500 truncate">
-                        <Tag size={10} className="flex-shrink-0" />
-                        <span className="truncate">{s.fromLabel}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-400 text-[11px] mt-1 truncate">
-                        <Folder size={10} className="flex-shrink-0" />
-                        <span className="truncate">{s.fromLayer}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           )}
         </div>
       </div>
@@ -763,8 +738,8 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
         </span>
       </div>
 
-      {/* 区域1：样本集概览（更紧凑 6 字段） */}
-      <div className="px-4 pt-4 pb-2">
+      {/* 样本集概览（更紧凑 6 字段） */}
+      <div className="p-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="text-sm font-medium text-gray-700 mb-3">样本集概览</div>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -805,82 +780,6 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* 区域2：该图层下的样本切片 */}
-      <div className="px-4 pb-4 pt-2">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm font-medium text-gray-700 mb-3">
-            该图层下的样本切片
-            <span className="text-xs text-gray-400 ml-2 font-normal">
-              共 {layerSamples.length} 个样本
-            </span>
-          </div>
-          {layerSamples.length === 0 ? (
-            <div className="h-40 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
-              <ImageIcon size={40} className="mb-3 text-gray-300" />
-              <div className="text-sm">该图层下暂无样本切片</div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-              {layerSamples.map((s) => {
-                const isPositive = !s.fromLabel.startsWith('背景/');
-                return (
-                  <div
-                    key={s.id}
-                    className="relative bg-white border border-gray-200 rounded-lg overflow-hidden group hover:shadow-md transition-shadow"
-                  >
-                    <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
-                      <ImageIcon size={32} className="text-gray-400" />
-                      <span
-                        className={`absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded text-white ${
-                          isPositive ? 'bg-green-500' : 'bg-red-400'
-                        }`}
-                      >
-                        {isPositive ? '正样本' : '负样本'}
-                      </span>
-                      <button
-                        onClick={() => {
-                          if (confirm('确定删除该样本切片？')) {
-                            sampleCategoryStore.set((prev) =>
-                              prev.map((c) =>
-                                c.id === display.id
-                                  ? {
-                                      ...c,
-                                      samples: c.samples.filter(
-                                        (x) => x.id !== s.id,
-                                      ),
-                                      updatedAt: nowStr(),
-                                    }
-                                  : c,
-                              ),
-                            );
-                          }
-                        }}
-                        className="absolute top-2 right-2 p-1 bg-white rounded shadow-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                    <div className="p-2 text-xs">
-                      <div className="font-medium text-gray-800 truncate mb-1" title={s.name}>
-                        {s.name}
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-500 truncate">
-                        <Tag size={10} className="flex-shrink-0" />
-                        <span className="truncate">{s.fromLabel}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-400 text-[11px] mt-1 truncate">
-                        <Folder size={10} className="flex-shrink-0" />
-                        <span className="truncate">{s.fromTask}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
     </div>
