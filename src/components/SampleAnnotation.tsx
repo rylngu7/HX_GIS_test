@@ -25,6 +25,7 @@ import {
   DATA_DIRECTORY,
   DATASET_NAMES,
   COLOR_PALETTE,
+  STANDARD_LIBRARY,
   annotationTaskStore,
   labelGroupStore,
   genId,
@@ -298,7 +299,11 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   const [description, setDescription] = useState(initial?.description || '');
 
   // 推导当前选中的文件夹与它的所有文件
-  const currentFolder = findEntryById(STANDARD_LIBRARY, folderId) || STANDARD_LIBRARY[0];
+  const currentFolder =
+    findEntryById(STANDARD_LIBRARY, folderId) || {
+      ...STANDARD_LIBRARY[0],
+      fullPath: STANDARD_LIBRARY[0].name,
+    };
   const currentFolderFiles = flattenFiles(currentFolder);
   const datasetName = currentFolder.name;
 
@@ -387,12 +392,12 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
                   ) : (
                     currentFolder.files.map((f) => (
                       <div
-                        key={f.path}
+                        key={f}
                         className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-50 text-xs text-gray-700"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                        <span className="truncate" title={f.path}>
-                          {f.name}
+                        <span className="truncate" title={f}>
+                          {f}
                         </span>
                       </div>
                     ))

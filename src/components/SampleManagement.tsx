@@ -22,9 +22,12 @@ import {
   SampleCategory,
   SampleItem,
   AnnotationTask,
+  AnnotationItem,
+  Label,
   COLOR_PALETTE,
   annotationTaskStore,
   sampleCategoryStore,
+  labelGroupStore,
   genId,
   nowStr,
   useStore,
@@ -421,6 +424,7 @@ const SampleManagement: React.FC = () => {
                 name: data.name,
                 color: data.color,
                 description: data.description || undefined,
+                createdAt: nowStr(),
                 updatedAt: nowStr(),
                 samples: data.samples || [],
               };
@@ -950,6 +954,9 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     initial?.samples || [],
   );
 
+  // 从全局标签管理中获取标签
+  const labelGroups = useStore(labelGroupStore);
+
   // 手动新增弹窗的三级选择状态
   const [manualDialog, setManualDialog] = useState(false);
   const [selTaskId, setSelTaskId] = useState<string>(tasks[0]?.id || '');
@@ -958,6 +965,25 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
 
   const currentTask = tasks.find((t) => t.id === selTaskId) || null;
 
+  // 从当前任务的已标注框中构建标签列表（task.labels 现在通常为空）
+  const taskLabels: Label[] = React.useMemo(() => {
+    if (!currentTask) return [];
+    const collected = new Map<string, Label>();
+    for (const layer of currentTask.layers) {
+      const anns = layer.annotations || [];
+      for (const a of anns) {
+        if (!collected.has(a.labelId)) {
+          collected.set(a.labelId, {
+            id: a.labelId,
+            name: a.labelName,
+            color: a.color,
+          });
+        }
+      }
+    }
+    return Array.from(collected.values());
+  }, [currentTask]);
+
   // 当切换任务时重置图层/标签选择
   React.useEffect(() => {
     if (currentTask && currentTask.layers.length > 0) {
@@ -965,12 +991,12 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     } else {
       setSelLayer('');
     }
-    if (currentTask && currentTask.labels.length > 0) {
-      setSelLabelId(currentTask.labels[0].id);
+    if (taskLabels.length > 0) {
+      setSelLabelId(taskLabels[0].id);
     } else {
       setSelLabelId('');
     }
-  }, [selTaskId]);
+  }, [selTaskId, taskLabels]);
 
   const confirm = () => {
     if (!name.trim()) {
@@ -1000,25 +1026,23 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     );
     const newItems: SampleItem[] = [];
     for (const task of tasks) {
-      for (const label of task.labels) {
-        if (label.name.toLowerCase() === targetName) {
-          for (const layer of task.layers) {
-            const anns = layer.annotations || [];
-            for (const a of anns) {
-              if (a.labelId !== label.id) continue;
-              const key = `${task.name}|${layer.name}|${label.name}|${a.displayName}`;
-              if (!existingKeys.has(key)) {
-                existingKeys.add(key);
-                newItems.push({
-                  id: genId(),
-                  name: a.displayName,
-                  fromTask: task.name,
-                  fromLayer: layer.name,
-                  fromLabel: label.name,
-                  extractedAt: nowStr(),
-                });
-              }
-            }
+      for (const layer of task.layers) {
+        const anns = layer.annotations || [];
+        for (const a of anns) {
+          // 匹配规则：标注框的 labelName 与样本集名称（不区分大小写）
+          // a.labelName 形如 "建筑物/居民楼"
+          if (a.labelName.toLowerCase() !== targetName) continue;
+          const key = `${task.name}|${layer.name}|${a.labelName}|${a.displayName}`;
+          if (!existingKeys.has(key)) {
+            existingKeys.add(key);
+            newItems.push({
+              id: genId(),
+              name: a.displayName,
+              fromTask: task.name,
+              fromLayer: layer.name,
+              fromLabel: a.labelName,
+              extractedAt: nowStr(),
+            });
           }
         }
       }
@@ -1038,7 +1062,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       return;
     }
     const layer = currentTask.layers.find((l) => l.id === selLayer);
-    const label = currentTask.labels.find((l) => l.id === selLabelId);
+    const label = taskLabels.find((l) => l.id === selLabelId);
     if (!layer || !label) return;
     const key = `${currentTask.name}|${layer.name}|${label.name}|手动添加`;
     if (samplesDraft.some((s) => `${s.fromTask}|${s.fromLayer}|${s.fromLabel}|${s.name || '手动添加'}` === key)) {
@@ -1294,13 +1318,13 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
                   选择标签
                 </label>
-                {currentTask && currentTask.labels.length > 0 ? (
+                {taskLabels.length > 0 ? (
                   <select
                     value={selLabelId}
                     onChange={(e) => setSelLabelId(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    {currentTask.labels.map((l) => (
+                    {taskLabels.map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.name}
                       </option>
@@ -1308,7 +1332,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                   </select>
                 ) : (
                   <div className="text-xs text-gray-400 border border-gray-200 rounded px-3 py-2">
-                    该任务下暂无标签，请先到标注工作台创建标签
+                    该任务下暂无标注标签，请先到标注工作台完成标注
                   </div>
                 )}
               </div>
