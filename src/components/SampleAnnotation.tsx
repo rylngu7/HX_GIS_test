@@ -1,180 +1,1138 @@
-import React, { useState } from 'react';
-import { Search, Plus, Image as ImageIcon, MoreVertical, Trash2, Save, X, ChevronLeft } from 'lucide-react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import {
+  Search,
+  Plus,
+  Image as ImageIcon,
+  ChevronLeft,
+  Check,
+  Square,
+  Pentagon,
+  CircleDot,
+  Trash2,
+  Save,
+  X,
+  Folder,
+  CornerUpLeft,
+  CornerUpRight,
+  MoreVertical,
+  Pencil,
+} from 'lucide-react';
+import {
+  AnnotationTask,
+  AnnotationItem,
+  Label,
+  LayerInTask,
+  DATA_DIRECTORY,
+  DATASET_NAMES,
+  COLOR_PALETTE,
+  annotationTaskStore,
+  genId,
+  nowStr,
+  useStore,
+} from './modelComputeData';
+import ColorPickerModal from './ColorPickerModal';
 
-interface Sample {
-  id: string;
-  name: string;
-  date: string;
-}
+// ==============================================================
+// 样本解译 - 三视图
+// 1. 标注任务列表（默认）
+// 2. 新建标注任务弹窗
+// 3. 标注工作台（点击任务卡片进入）
+// ==============================================================
 
 const SampleAnnotation: React.FC = () => {
-  const [selectedSample, setSelectedSample] = useState<Sample | null>(null);
+  const tasks = useStore(annotationTaskStore);
   const [searchQuery, setSearchQuery] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [completePromptOpen, setCompletePromptOpen] = useState(false);
+  // 卡片三点菜单
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  // 编辑任务弹窗
+  const [editTask, setEditTask] = useState<AnnotationTask | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const samples: Sample[] = [
-    { id: '1', name: 'test789', date: '2026-05-26 16:49:54' },
-    { id: '2', name: 'test456', date: '2026-05-26 16:17:44' },
-    { id: '3', name: 'test123', date: '2026-05-26 14:51:05' },
-    { id: '4', name: 'ikik', date: '2025-12-25 10:57:38' },
-    { id: '5', name: 'uu', date: '2025-11-04 17:17:46' }
-  ];
+  // 点击外部关闭三点菜单
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    if (openMenuId) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openMenuId]);
 
-  const filteredSamples = samples.filter(sample => 
-    sample.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTasks = useMemo(
+    () =>
+      tasks.filter((t) =>
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [tasks, searchQuery],
   );
 
-  const handleCancel = () => {
-    setSelectedSample(null);
-  };
+  const activeTask = tasks.find((t) => t.id === activeTaskId) || null;
 
-  if (selectedSample) {
+  // ---------- 任务列表视图 ----------
+  if (activeTask) {
     return (
-      <div className="flex h-full bg-gray-50">
-        {/* 左侧：选中的样本卡片 */}
-        <div className="w-72 bg-white border-r border-gray-200 flex flex-col p-4">
-          <button
-            onClick={handleCancel}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
-          >
-            <ChevronLeft size={20} />
-            <span className="font-medium">样本列表</span>
-          </button>
-          
-          {/* 选中的样本卡片 */}
-          <div className="bg-white border-2 border-blue-500 rounded-lg p-3">
-            <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-purple-100 rounded mb-2 flex items-center justify-center">
-              <ImageIcon size={48} className="text-blue-400" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-800">{selectedSample.name}</span>
-              <MoreVertical size={16} className="text-gray-400" />
-            </div>
-            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-              <span>📅</span>
-              <span>{selectedSample.date}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 中央：标注区域 */}
-        <div className="flex-1 flex flex-col bg-white">
-          <div className="flex-1 bg-gray-100 flex items-center justify-center p-8">
-            <div className="w-full h-full bg-white border border-gray-200 rounded-lg flex items-center justify-center">
-              <ImageIcon size={160} className="text-gray-300" />
-            </div>
-          </div>
-        </div>
-
-        {/* 右侧：标注操作栏 */}
-        <div className="w-72 bg-white border-l border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="font-medium text-gray-800 mb-3">样本标注 - {selectedSample.name}</h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">选择图层数据</label>
-              <div className="flex gap-2">
-                <div className="flex-1 px-3 py-2 bg-gray-100 border border-gray-300 rounded text-sm text-gray-500">
-                  冰雪.tif
-                </div>
-                <button className="px-3 py-2 border border-purple-600 text-purple-600 rounded text-sm hover:bg-purple-50">
-                  重新选择
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">制作样本标签</label>
-              <div className="flex gap-2">
-                <button className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm flex items-center justify-center gap-2 hover:bg-gray-50">
-                  <Trash2 size={16} />
-                  <span>清除</span>
-                </button>
-                <button className="flex-1 px-3 py-2 bg-purple-600 text-white rounded text-sm flex items-center justify-center gap-2 hover:bg-purple-700">
-                  <Plus size={16} />
-                  <span>标签</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">标签栏</label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 p-2 border border-gray-200 rounded">
-                  <div className="w-6 h-6 bg-blue-500 rounded" />
-                  <input
-                    type="text"
-                    placeholder="?"
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-auto p-4 border-t border-gray-200 flex gap-2">
-            <button
-              onClick={handleCancel}
-              className="flex-1 px-4 py-2 text-purple-600 border border-purple-600 rounded text-sm hover:bg-purple-50"
-            >
-              取消
-            </button>
-            <button className="flex-1 px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700">
-              保存
-            </button>
-          </div>
-        </div>
-      </div>
+      <AnnotationWorkbench
+        task={activeTask}
+        onBack={() => setActiveTaskId(null)}
+        onRequestComplete={() => setCompletePromptOpen(true)}
+      />
     );
   }
 
   return (
-    <div className="h-full bg-gray-50 p-4">
-      <div className="bg-white border border-gray-200 rounded-lg p-4 h-full flex flex-col">
-        {/* 搜索框 */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-            <input
-              type="text"
-              placeholder="输入样本标注名称搜索"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
-            <Plus size={16} />
-            <span>新增</span>
-          </button>
+    <div className="h-full bg-gray-50 p-4 flex flex-col">
+      {/* 顶部操作栏 */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="relative w-72">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={14}
+          />
+          <input
+            type="text"
+            placeholder="输入标注任务名称搜索"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+        >
+          <Plus size={16} />
+          <span>新建标注任务</span>
+        </button>
+      </div>
 
-        {/* 样本列表 - 2列展示 */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-4">
-            {filteredSamples.map((sample) => (
+      {/* 任务卡片网格 */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {filteredTasks.map((task) => {
+            const annotatedCount = task.layers.filter((l) => l.annotated)
+              .length;
+            const total = task.layers.length;
+            const percent =
+              total === 0 ? 0 : Math.round((annotatedCount / total) * 100);
+            return (
               <div
-                key={sample.id}
-                onClick={() => setSelectedSample(sample)}
-                className="bg-white border rounded-lg p-3 cursor-pointer transition-all hover:shadow-md border-gray-200 hover:border-blue-500"
+                key={task.id}
+                onClick={() => setActiveTaskId(task.id)}
+                className="bg-white border border-gray-200 rounded-md p-2.5 cursor-pointer transition-all hover:shadow-md hover:border-blue-500 relative"
               >
-                <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-purple-100 rounded mb-2 flex items-center justify-center">
-                  <ImageIcon size={48} className="text-blue-400" />
+                <div className="w-full aspect-[4/3] bg-gradient-to-br from-blue-100 to-purple-100 rounded mb-2 flex items-center justify-center">
+                  <ImageIcon size={40} className="text-blue-400" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-800">{sample.name}</span>
-                  <MoreVertical size={16} className="text-gray-400" />
+                  <span className="text-xs font-medium text-gray-800 truncate pr-6">
+                    {task.name}
+                  </span>
+                  {/* 三点菜单按钮 - 阻止冒泡 */}
+                  <div
+                    className="relative"
+                    ref={openMenuId === task.id ? menuRef : null}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() =>
+                        setOpenMenuId(openMenuId === task.id ? null : task.id)
+                      }
+                      className="p-1 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors"
+                      title="更多操作"
+                    >
+                      <MoreVertical size={14} />
+                    </button>
+                    {openMenuId === task.id && (
+                      <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-md shadow-lg z-20 py-1 w-24">
+                        <button
+                          onClick={() => {
+                            setEditTask(task);
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          <Pencil size={12} /> 编辑
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`确定删除任务「${task.name}」？`)) {
+                              annotationTaskStore.set((prev) =>
+                                prev.filter((t) => t.id !== task.id),
+                              );
+                            }
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        >
+                          <Trash2 size={12} /> 删除
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                  <span>📅</span>
-                  <span>{sample.date}</span>
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <span
+                    className={`text-[11px] px-1.5 py-0.5 rounded ${
+                      task.status === '已完成'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}
+                  >
+                    {task.status}
+                  </span>
+                </div>
+                <div className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1">
+                  <Folder size={10} />
+                  <span className="truncate">{task.datasetName}</span>
+                  <span className="mx-1">·</span>
+                  <span className="flex-shrink-0">
+                    {annotatedCount}/{total}
+                  </span>
+                </div>
+                <div className="mt-1.5 h-1 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 transition-all"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-gray-400 mt-1.5">
+                  {task.createdAt}
                 </div>
               </div>
-            ))}
+            );
+          })}
+
+          {filteredTasks.length === 0 && (
+            <div className="col-span-full bg-white border border-dashed border-gray-300 rounded-lg py-16 flex flex-col items-center text-gray-400 text-sm">
+              <ImageIcon size={40} className="mb-3" />
+              暂无标注任务，点击右上角新建
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 新建任务弹窗 */}
+      {createOpen && (
+        <TaskFormModal
+          onClose={() => setCreateOpen(false)}
+          onSubmit={(task) => {
+            annotationTaskStore.set((prev) => [task, ...prev]);
+            setCreateOpen(false);
+          }}
+        />
+      )}
+
+      {/* 编辑任务弹窗 */}
+      {editTask && (
+        <TaskFormModal
+          mode="edit"
+          initial={editTask}
+          onClose={() => setEditTask(null)}
+          onSubmit={(task) => {
+            annotationTaskStore.set((prev) =>
+              prev.map((t) =>
+                t.id === editTask.id ? { ...task, id: t.id, layers: t.layers, labels: t.labels, createdAt: t.createdAt, status: t.status } : t,
+              ),
+            );
+            setEditTask(null);
+          }}
+        />
+      )}
+
+      {/* 完成任务确认弹窗 */}
+      {completePromptOpen && (
+        <CompleteTaskModal
+          task={tasks.find((t) => t.id === activeTaskId)!}
+          onClose={() => setCompletePromptOpen(false)}
+          onConfirm={() => {
+            annotationTaskStore.set((prev) =>
+              prev.map((t) =>
+                t.id === activeTaskId
+                  ? {
+                      ...t,
+                      status: '已完成',
+                      layers: t.layers.map((l) => ({ ...l, annotated: true })),
+                    }
+                  : t,
+              ),
+            );
+            setCompletePromptOpen(false);
+            setActiveTaskId(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default SampleAnnotation;
+
+// ==============================================================
+// 标注任务表单弹窗（支持新建 / 编辑两种模式）
+// ==============================================================
+
+interface TaskFormModalProps {
+  mode?: 'create' | 'edit';
+  initial?: AnnotationTask;
+  onClose: () => void;
+  onSubmit: (task: AnnotationTask) => void;
+}
+
+const TaskFormModal: React.FC<TaskFormModalProps> = ({
+  mode = 'create',
+  initial,
+  onClose,
+  onSubmit,
+}) => {
+  const [name, setName] = useState(initial?.name || '');
+  const [dataset, setDataset] = useState(initial?.datasetName || DATASET_NAMES[0]);
+  const [description, setDescription] = useState(initial?.description || '');
+
+  const handleConfirm = () => {
+    if (!name.trim()) {
+      alert('请输入标注任务名称');
+      return;
+    }
+    // 编辑模式下，如果数据集有变化，则同步更新图层列表
+    const layers: LayerInTask[] =
+      mode === 'edit' && initial && dataset === initial.datasetName
+        ? initial.layers
+        : (DATA_DIRECTORY[dataset] || []).map((n) => ({
+            id: genId(),
+            name: n,
+            annotated: false,
+            annotations: [],
+          }));
+    const labels = mode === 'edit' && initial ? initial.labels : [];
+    const task: AnnotationTask = {
+      id: initial?.id || genId(),
+      name: name.trim(),
+      datasetName: dataset,
+      description: description.trim() || undefined,
+      createdAt: initial?.createdAt || nowStr(),
+      status: initial?.status || '进行中',
+      layers,
+      labels,
+    };
+    onSubmit(task);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl w-[480px]">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+          <h3 className="text-base font-medium text-gray-800">
+            {mode === 'edit' ? '编辑标注任务' : '新建标注任务'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              任务名称 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例如：城区建筑物轮廓标注"
+              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              数据集 <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={dataset}
+              onChange={(e) => setDataset(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              {DATASET_NAMES.map((d) => (
+                <option key={d} value={d}>
+                  {d}（{(DATA_DIRECTORY[d] || []).length} 个图层）
+                </option>
+              ))}
+            </select>
+            <div className="mt-1.5 text-xs text-gray-400">
+              从数据目录标准库中选择 · 包含 {(DATA_DIRECTORY[dataset] || []).length} 个图层：{(DATA_DIRECTORY[dataset] || []).join('、')}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              描述
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="描述该标注任务的目标和注意事项"
+              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            {mode === 'edit' ? '保存' : '创建'}
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default SampleAnnotation;
+// ==============================================================
+// 完成任务确认弹窗
+// ==============================================================
+
+interface CompleteTaskModalProps {
+  task: AnnotationTask;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
+  task,
+  onClose,
+  onConfirm,
+}) => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl w-[400px]">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+        <h3 className="text-base font-medium text-gray-800">完成标注任务</h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <X size={18} />
+        </button>
+      </div>
+      <div className="px-5 py-4 text-sm text-gray-700">
+        确认将任务「<span className="text-blue-600 font-medium">{task.name}</span>
+        」标记为已完成？标记后仍可随时进入继续编辑。
+      </div>
+      <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+        >
+          取消
+        </button>
+        <button
+          onClick={onConfirm}
+          className="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+        >
+          确认完成
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// ==============================================================
+// 标注工作台 - 三视图之三（核心）
+// 交互流程：选择工具 → 选择标签 → 在画布上点击/拖拽创建标注
+// 标注框保存在 task.layers[].annotations（通过 annotationTaskStore 持久化）
+// ==============================================================
+
+interface AnnotationWorkbenchProps {
+  task: AnnotationTask;
+  onBack: () => void;
+  onRequestComplete: () => void;
+}
+
+const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
+  task,
+  onBack,
+  onRequestComplete,
+}) => {
+  const [currentLayerIdx, setCurrentLayerIdx] = useState(0);
+  const [activeTool, setActiveTool] = useState<'box' | 'polygon' | null>(
+    null,
+  );
+  const [newLabelName, setNewLabelName] = useState('');
+  const [newLabelColor, setNewLabelColor] = useState(COLOR_PALETTE[0]);
+  const [labelColorPickerOpen, setLabelColorPickerOpen] = useState(false);
+  const [savedTip, setSavedTip] = useState(false);
+
+  // ---- 标注流程状态 ----
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(
+    task.labels[0]?.id || null,
+  );
+  // 本地工作副本（从 task.layers[].annotations 读取已有标注）
+  const [annotationsByLayer, setAnnotationsByLayer] = useState<
+    Record<string, AnnotationItem[]>
+  >(() => {
+    const init: Record<string, AnnotationItem[]> = {};
+    task.layers.forEach((l) => {
+      init[l.id] = l.annotations ? [...l.annotations] : [];
+    });
+    return init;
+  });
+  // 每个标签的计数：从已有标注中推算（保证"建筑物1"这种序号不重复）
+  const [labelCounter, setLabelCounter] = useState<Record<string, number>>(
+    () => {
+      const c: Record<string, number> = {};
+      task.labels.forEach((l) => {
+        c[l.id] = 0;
+      });
+      // 从已有标注的 displayName 后缀提取最大序号
+      task.layers.forEach((layer) => {
+        (layer.annotations || []).forEach((a) => {
+          const match = a.displayName.match(/(\d+)$/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            c[a.labelId] = Math.max(c[a.labelId] || 0, num);
+          }
+        });
+      });
+      return c;
+    },
+  );
+  // 框选模式中：起点（起点按下的百分比位置）
+  const [dragStart, setDragStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  // 框选过程中当前位置（用于预览框）
+  const [dragCurrent, setDragCurrent] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const layers = task.layers;
+  const currentLayer = layers[currentLayerIdx];
+  const currentAnnotations =
+    annotationsByLayer[currentLayer?.id || '__none__'] || [];
+  const annotatedCount = layers.filter(
+    (l) => (annotationsByLayer[l.id] || []).length > 0,
+  ).length;
+  const total = layers.length;
+  const allAnnotated = annotatedCount === total && total > 0;
+
+  const gotoLayer = (idx: number) => {
+    if (idx < 0 || idx >= layers.length) return;
+    setCurrentLayerIdx(idx);
+  };
+
+  // 保存当前图层的标注框到 Store（供样本管理页面使用）
+  const handleSave = () => {
+    const layerId = currentLayer?.id;
+    if (!layerId) return;
+    const anns = annotationsByLayer[layerId] || [];
+    annotationTaskStore.set((prev) =>
+      prev.map((t) =>
+        t.id === task.id
+          ? {
+              ...t,
+              layers: t.layers.map((l) =>
+                l.id === layerId
+                  ? { ...l, annotated: anns.length > 0, annotations: anns }
+                  : l,
+              ),
+            }
+          : t,
+      ),
+    );
+    setSavedTip(true);
+    setTimeout(() => setSavedTip(false), 1200);
+  };
+
+  const addLabel = () => {
+    const name = newLabelName.trim();
+    if (!name) return;
+    if (task.labels.some((l) => l.name === name)) {
+      alert('该标签已存在');
+      return;
+    }
+    const newLabel: Label = { id: genId(), name, color: newLabelColor };
+    annotationTaskStore.set((prev) =>
+      prev.map((t) =>
+        t.id === task.id ? { ...t, labels: [...t.labels, newLabel] } : t,
+      ),
+    );
+    // 给新标签初始化计数
+    setLabelCounter((prev) => ({ ...prev, [newLabel.id]: 0 }));
+    setNewLabelName('');
+  };
+
+  const deleteLabel = (labelId: string) => {
+    annotationTaskStore.set((prev) =>
+      prev.map((t) =>
+        t.id === task.id
+          ? { ...t, labels: t.labels.filter((l) => l.id !== labelId) }
+          : t,
+      ),
+    );
+    if (selectedLabelId === labelId) {
+      setSelectedLabelId(task.labels.find((l) => l.id !== labelId)?.id || null);
+    }
+  };
+
+  // ---- 标注流程工具函数 ----
+  const handleToolSelect = (tool: 'box' | 'polygon') => {
+    setActiveTool(activeTool === tool ? null : tool);
+  };
+
+  // 把鼠标事件转成百分比坐标
+  const toPercent = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    return {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    };
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!activeTool || !selectedLabelId) return;
+    const pos = toPercent(e);
+    setDragStart(pos);
+    setDragCurrent(pos);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragStart) return;
+    setDragCurrent(toPercent(e));
+  };
+
+  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragStart || !activeTool || !selectedLabelId) {
+      setDragStart(null);
+      setDragCurrent(null);
+      return;
+    }
+    const endPos = toPercent(e);
+    const x = Math.min(dragStart.x, endPos.x);
+    const y = Math.min(dragStart.y, endPos.y);
+    const w = Math.abs(endPos.x - dragStart.x);
+    const h = Math.abs(endPos.y - dragStart.y);
+
+    // 太小的拖拽视为无效（防止误触）
+    if (w < 2 || h < 2) {
+      setDragStart(null);
+      setDragCurrent(null);
+      return;
+    }
+
+    const label = task.labels.find((l) => l.id === selectedLabelId);
+    if (!label) return;
+
+    // 生成序号
+    const nextNum = (labelCounter[selectedLabelId] || 0) + 1;
+    const newItem: AnnotationItem = {
+      id: genId(),
+      labelId: selectedLabelId,
+      labelName: label.name,
+      color: label.color,
+      displayName: `${label.name}${nextNum}`,
+      xPercent: x,
+      yPercent: y,
+      wPercent: w,
+      hPercent: h,
+    };
+
+    const layerId = currentLayer?.id || '';
+    setAnnotationsByLayer((prev) => ({
+      ...prev,
+      [layerId]: [...(prev[layerId] || []), newItem],
+    }));
+    setLabelCounter((prev) => ({
+      ...prev,
+      [selectedLabelId]: nextNum,
+    }));
+
+    setDragStart(null);
+    setDragCurrent(null);
+  };
+
+  // 删除单个标注
+  const deleteAnnotation = (annotationId: string) => {
+    const layerId = currentLayer?.id || '';
+    setAnnotationsByLayer((prev) => ({
+      ...prev,
+      [layerId]: (prev[layerId] || []).filter((a) => a.id !== annotationId),
+    }));
+  };
+
+  // 清除当前图层所有标注
+  const clearAnnotations = () => {
+    const layerId = currentLayer?.id || '';
+    setAnnotationsByLayer((prev) => ({ ...prev, [layerId]: [] }));
+  };
+
+  // 鼠标光标状态：有工具+标签时变为十字
+  const isDrawing = activeTool && selectedLabelId;
+  const cursorClass = isDrawing
+    ? dragStart
+      ? 'cursor-crosshair'
+      : 'cursor-crosshair'
+    : 'cursor-default';
+
+  // 工具按钮状态指示文案
+  const hintText = !activeTool
+    ? '请先在右上方选择标注工具'
+    : !selectedLabelId
+      ? '请选择一个标签'
+      : dragStart
+        ? `松开鼠标完成「${task.labels.find((l) => l.id === selectedLabelId)?.name}」标注`
+        : `工具：${activeTool === 'box' ? '框选' : '多边形'} · 在画布上按下鼠标并拖拽绘制`;
+
+  // 计算正在拖拽的预览框位置
+  const previewBox =
+    dragStart && dragCurrent
+      ? {
+          x: Math.min(dragStart.x, dragCurrent.x),
+          y: Math.min(dragStart.y, dragCurrent.y),
+          w: Math.abs(dragCurrent.x - dragStart.x),
+          h: Math.abs(dragCurrent.y - dragStart.y),
+        }
+      : null;
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* 顶部信息栏 */}
+      <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 text-gray-600 hover:text-gray-800 text-sm"
+          >
+            <ChevronLeft size={18} />
+            <span>返回任务列表</span>
+          </button>
+          <span className="text-gray-300">|</span>
+          <span className="text-sm font-medium text-gray-800">{task.name}</span>
+          <span className="text-xs text-gray-500">（{task.datasetName}）</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-600">
+            进度：
+            <span className="font-medium text-gray-800">
+              {annotatedCount}/{total}
+            </span>
+            （第 {currentLayerIdx + 1} 张）
+          </div>
+          {savedTip && (
+            <span className="text-xs text-green-600">已保存 ✓</span>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+            >
+              <Save size={14} />
+              <span>保存当前图层</span>
+            </button>
+            {allAnnotated && (
+              <button
+                onClick={onRequestComplete}
+                className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+              >
+                完成任务
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 主体 3 栏布局 */}
+      <div className="flex-1 flex overflow-hidden bg-gray-50">
+        {/* 左侧图层列表 - 紧凑 */}
+        <div className="w-40 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+          <div className="px-4 py-2.5 border-b border-gray-200 text-sm font-medium text-gray-800 flex items-center justify-between">
+            <span>图层列表</span>
+            <span className="text-xs text-gray-500">{total} 张</span>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {layers.map((layer, idx) => {
+              const isCurrent = idx === currentLayerIdx;
+              const count = (annotationsByLayer[layer.id] || []).length;
+              return (
+                <button
+                  key={layer.id}
+                  onClick={() => gotoLayer(idx)}
+                  className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between border-b border-gray-100 transition-colors ${
+                    isCurrent
+                      ? 'bg-blue-50 text-blue-700 border-l-4 border-l-blue-600'
+                      : 'hover:bg-gray-50 text-gray-700 border-l-4 border-l-transparent'
+                  }`}
+                >
+                  <span className="truncate pr-2">
+                    <span className="text-gray-400 mr-1.5">#{idx + 1}</span>
+                    {layer.name}
+                  </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {count > 0 && (
+                      <span className="text-[10px] text-gray-500">
+                        {count}个
+                      </span>
+                    )}
+                    {(layer.annotated || count > 0) && (
+                      <Check size={12} className="text-green-600" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 中央画布区 - 大幅放大 */}
+        <div className="flex-1 flex items-stretch p-6 min-w-0">
+          <div
+            className={`w-full h-full bg-white border border-gray-200 rounded-lg relative overflow-hidden shadow-sm select-none ${cursorClass}`}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={() => {
+              if (dragStart) {
+                setDragStart(null);
+                setDragCurrent(null);
+              }
+            }}
+          >
+            {/* 网格背景 */}
+            <div
+              className="absolute inset-0 opacity-40 pointer-events-none"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(0deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 60px), repeating-linear-gradient(90deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 60px)',
+              }}
+            />
+
+            {/* 图层名称 */}
+            <div className="absolute top-3 left-4 z-20 bg-white bg-opacity-90 px-2.5 py-1 rounded border border-gray-200 text-xs text-gray-600">
+              {currentLayer?.name}
+            </div>
+
+            {/* 已完成标记 */}
+            {currentAnnotations.length > 0 && (
+              <div className="absolute top-3 right-4 z-20 bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded">
+                已标注 {currentAnnotations.length} 个 ✓
+              </div>
+            )}
+
+            {/* 已有的标注框 */}
+            {currentAnnotations.map((a) => (
+              <div
+                key={a.id}
+                className="absolute rounded border-2 z-10 group"
+                style={{
+                  left: `${a.xPercent}%`,
+                  top: `${a.yPercent}%`,
+                  width: `${a.wPercent}%`,
+                  height: `${a.hPercent}%`,
+                  borderColor: a.color,
+                  backgroundColor: `${a.color}22`,
+                }}
+              >
+                <div
+                  className="absolute -top-5 left-0 text-[10px] font-medium whitespace-nowrap px-1.5 py-0.5 rounded text-white"
+                  style={{ backgroundColor: a.color }}
+                >
+                  {a.displayName}
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteAnnotation(a.id);
+                  }}
+                  className="absolute -top-2 -right-2 w-4 h-4 bg-white border border-gray-300 rounded-full text-[10px] text-gray-500 hover:text-red-500 hover:border-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+
+            {/* 正在拖拽中的预览框 */}
+            {previewBox && selectedLabelId && (
+              <div
+                className="absolute border-2 border-dashed z-20 pointer-events-none"
+                style={{
+                  left: `${previewBox.x}%`,
+                  top: `${previewBox.y}%`,
+                  width: `${previewBox.w}%`,
+                  height: `${previewBox.h}%`,
+                  borderColor:
+                    task.labels.find((l) => l.id === selectedLabelId)?.color ||
+                    '#3B82F6',
+                  backgroundColor: `${
+                    task.labels.find((l) => l.id === selectedLabelId)?.color ||
+                    '#3B82F6'
+                  }22`,
+                }}
+              />
+            )}
+
+            {/* 中心提示（只有在图层无标注且未拖拽时显示） */}
+            {currentAnnotations.length === 0 && !dragStart && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                <ImageIcon size={140} className="text-gray-300" />
+                <div className="mt-6 text-base text-gray-600 font-medium">
+                  当前图层：
+                  <span className="text-gray-800">{currentLayer?.name}</span>
+                </div>
+                <div className="mt-2 text-xs text-gray-400">{hintText}</div>
+                {isDrawing && (
+                  <div className="mt-4 text-xs text-purple-600 bg-purple-50 px-3 py-1.5 rounded border border-purple-200 font-medium">
+                    就绪：按下鼠标并拖拽绘制
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 状态提示条（底部） */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-white bg-opacity-95 px-3 py-1.5 rounded border border-gray-200 text-xs text-gray-600 flex items-center gap-2">
+              {isDrawing ? (
+                <>
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-sm"
+                    style={{
+                      backgroundColor:
+                        task.labels.find((l) => l.id === selectedLabelId)
+                          ?.color || '#ccc',
+                    }}
+                  />
+                  <span className="text-gray-700">
+                    {task.labels.find((l) => l.id === selectedLabelId)?.name}
+                  </span>
+                  <span className="text-gray-400">·</span>
+                  <span>{activeTool === 'box' ? '框选工具' : '多边形工具'}</span>
+                  <span className="text-gray-400">·</span>
+                  <span className="text-gray-500">拖拽鼠标绘制标注区域</span>
+                </>
+              ) : (
+                <span className="text-gray-400">
+                  提示：先选工具，再选标签，最后在画布中框选
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 右侧操作栏 - 紧凑 */}
+        <div className="w-48 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+          {/* 段 1：标注工具 - 更方正的按钮 */}
+          <div className="border-b border-gray-200">
+            <div className="px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50">
+              标注工具
+            </div>
+            <div className="px-3 py-3 grid grid-cols-3 gap-2">
+              <ToolButton
+                active={activeTool === 'box'}
+                onClick={() => handleToolSelect('box')}
+                icon={<Square size={16} />}
+                label="框选"
+              />
+              <ToolButton
+                active={activeTool === 'polygon'}
+                onClick={() => handleToolSelect('polygon')}
+                icon={<Pentagon size={16} />}
+                label="多边形"
+              />
+              <ToolButton
+                active={false}
+                onClick={clearAnnotations}
+                icon={<Trash2 size={16} />}
+                label="清除"
+                danger
+              />
+            </div>
+          </div>
+
+          {/* 段 2：标签管理 - 可点击选中 */}
+          <div className="border-b border-gray-200 flex-1 overflow-y-auto">
+            <div className="px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50 flex items-center justify-between">
+              <span>标签管理</span>
+              <span className="text-gray-500">{task.labels.length} 个</span>
+            </div>
+            <div className="px-3 py-2 space-y-1.5">
+              {task.labels.length === 0 && (
+                <div className="text-xs text-gray-400 py-2 text-center">
+                  请先新建标签
+                </div>
+              )}
+              {task.labels.map((lb) => {
+                const isSelected = selectedLabelId === lb.id;
+                const count = labelCounter[lb.id] || 0;
+                return (
+                  <div
+                    key={lb.id}
+                    onClick={() => setSelectedLabelId(lb.id)}
+                    className={`flex items-center gap-2 px-2 py-2 rounded cursor-pointer transition-all border ${
+                      isSelected
+                        ? 'border-purple-400 bg-purple-50 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span
+                      className="w-4 h-4 rounded-sm flex-shrink-0"
+                      style={{ backgroundColor: lb.color }}
+                    />
+                    <span className="text-xs text-gray-700 flex-1 truncate">
+                      {lb.name}
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      {count > 0 ? `${count}个` : ''}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteLabel(lb.id);
+                      }}
+                      className="text-gray-400 hover:text-red-500 transition-opacity"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 新建标签 */}
+            <div className="px-3 pb-3 pt-1 border-t border-gray-100">
+              <div className="text-xs text-gray-500 mb-1.5">新建标签</div>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={newLabelName}
+                  onChange={(e) => setNewLabelName(e.target.value)}
+                  placeholder="名称"
+                  className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={addLabel}
+                  className="px-2.5 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                >
+                  +
+                </button>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded border border-gray-300 flex-shrink-0"
+                  style={{ backgroundColor: newLabelColor }}
+                />
+                <button
+                  onClick={() => setLabelColorPickerOpen(true)}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  打开上色工具
+                </button>
+                <span className="text-xs text-gray-400 font-mono">
+                  {newLabelColor}
+                </span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+                <span className="text-xs text-gray-400 flex-shrink-0">
+                  快速：
+                </span>
+                {COLOR_PALETTE.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setNewLabelColor(c)}
+                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                      newLabelColor === c
+                        ? 'border-gray-700 scale-110'
+                        : 'border-white ring-1 ring-gray-200'
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 段 3：图层切换 */}
+          <div className="border-t border-gray-200 p-3 bg-gray-50">
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => gotoLayer(currentLayerIdx - 1)}
+                disabled={currentLayerIdx === 0}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 border border-gray-300 text-xs text-gray-700 rounded hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <CornerUpLeft size={12} /> 上一张
+              </button>
+              <button
+                onClick={() => gotoLayer(currentLayerIdx + 1)}
+                disabled={currentLayerIdx >= layers.length - 1}
+                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                下一张 <CornerUpRight size={12} />
+              </button>
+            </div>
+            <div className="text-xs text-gray-500 text-center">
+              第 {currentLayerIdx + 1} / {layers.length} 张
+            </div>
+            {currentLayerIdx === layers.length - 1 && allAnnotated && (
+              <button
+                onClick={onRequestComplete}
+                className="w-full mt-2 px-2 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+              >
+                ✓ 全部标注完成
+              </button>
+            )}
+          </div>
+        </div>
+        <ColorPickerModal
+          isOpen={labelColorPickerOpen}
+          onClose={() => setLabelColorPickerOpen(false)}
+          onSelect={(c) => setNewLabelColor(c)}
+          initialColor={newLabelColor}
+        />
+      </div>
+    </div>
+  );
+};
+
+// ==============================================================
+// 工具按钮 - 小组件
+// ==============================================================
+
+interface ToolButtonProps {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  danger?: boolean;
+}
+
+const ToolButton: React.FC<ToolButtonProps> = ({
+  active,
+  onClick,
+  icon,
+  label,
+  danger,
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex flex-col items-center justify-center gap-1 px-1.5 py-2 border rounded-md text-xs transition-all min-h-[56px] ${
+      active
+        ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+        : danger
+          ? 'bg-white text-red-500 border-gray-300 hover:border-red-300 hover:shadow-sm'
+          : 'bg-white text-gray-700 border-gray-300 hover:border-purple-400 hover:shadow-sm'
+    }`}
+  >
+    {icon}
+    <span className="text-[11px] leading-none">{label}</span>
+  </button>
+);
+
+

@@ -1,7 +1,7 @@
 // ============================================================
 // 模型计算页共享数据层
 // - 类型定义
-// - 数据目录（数据管理-数据目录-标准库的文件夹）
+// - 数据目录（标准库 / 融合库）
 // - 标注任务列表
 // - 样本类别列表
 // ============================================================
@@ -10,19 +10,21 @@ import React from 'react';
 
 // -------------------- 类型定义 --------------------
 
+// -------------------- 数据类型定义 --------------------
+
 export interface Label {
   id: string;
   name: string;
   color: string;
 }
 
-// 单个标注框（用户在画布上拖拽绘制）
+// 单个标注框（由用户在画布上拖拽绘制）
 export interface AnnotationItem {
   id: string;
   labelId: string;
   labelName: string;
   color: string;
-  displayName: string; // 自动编号，如"建筑物1"
+  displayName: string;  // 展示用名称，如"建筑物1"
   xPercent: number;
   yPercent: number;
   wPercent: number;
@@ -33,14 +35,13 @@ export interface LayerInTask {
   id: string;
   name: string;
   annotated: boolean;
-  annotations: AnnotationItem[]; // 该图层上的标注框
+  annotations: AnnotationItem[];  // 该图层上的标注框
 }
 
 export interface AnnotationTask {
   id: string;
   name: string;
   datasetName: string;
-  folderName: string; // 数据管理-数据目录-标准库-文件夹名
   description?: string;
   createdAt: string;
   status: '进行中' | '已完成';
@@ -50,7 +51,7 @@ export interface AnnotationTask {
 
 export interface SampleItem {
   id: string;
-  name: string; // 继承自标注框的 displayName
+  name: string;         // 切片名称，如"建筑物1"
   fromTask: string;
   fromLayer: string;
   fromLabel: string;
@@ -66,102 +67,155 @@ export interface SampleCategory {
   samples: SampleItem[];
 }
 
-// -------------------- 数据目录：标准库文件夹 --------------------
-// 数据来源：数据管理 → 数据目录 → 标准库
-// 每个文件夹 = 一个数据集
-export interface DatasetFolder {
-  name: string; // 标准库/城区影像集、港口航拍、...
-  files: string[]; // 文件夹内的影像文件
+// -------------------- 数据目录项 --------------------
+
+export interface DataCatalogEntry {
+  id: string;
+  name: string;
+  files: string[]; // 图层文件名
 }
-
-export const STANDARD_LIBRARY: DatasetFolder[] = [
-  {
-    name: '城区影像集',
-    files: ['影像_001.tiff', '影像_002.tiff', '影像_003.tiff', '影像_004.tiff'],
-  },
-  {
-    name: '港口航拍',
-    files: ['码头_东侧.tif', '码头_西侧.tif', '集装箱区.tif', '航道.tif'],
-  },
-  {
-    name: '道路巡检',
-    files: ['路段A_2024.tif', '路段B_2024.tif', '路段C_2024.tif'],
-  },
-];
-
-// 兼容旧引用
-export const DATA_DIRECTORY: Record<string, string[]> =
-  STANDARD_LIBRARY.reduce((acc, f) => {
-    acc[f.name] = f.files;
-    return acc;
-  }, {} as Record<string, string[]>);
-
-export const DATASET_NAMES = STANDARD_LIBRARY.map((f) => f.name);
-
-// -------------------- 颜色面板 --------------------
-export const COLOR_PALETTE: string[] = [
-  '#3B82F6', // 蓝
-  '#10B981', // 绿
-  '#F59E0B', // 黄
-  '#EF4444', // 红
-  '#8B5CF6', // 紫
-  '#EC4899', // 粉
-  '#14B8A6', // 青
-  '#F97316', // 橙
-];
 
 // -------------------- 工具函数 --------------------
 
 export const genId = (): string =>
-  Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  Date.now().toString() + Math.random().toString(36).slice(2, 8);
 
 export const nowStr = (): string => {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return (
+    d.getFullYear() +
+    '-' +
+    pad(d.getMonth() + 1) +
+    '-' +
+    pad(d.getDate()) +
+    ' ' +
+    pad(d.getHours()) +
+    ':' +
+    pad(d.getMinutes()) +
+    ':' +
+    pad(d.getSeconds())
+  );
 };
 
-// -------------------- 简易单例状态 --------------------
+// -------------------- 数据目录（标准库 + 融合库） --------------------
 
-type Listener = () => void;
+export const STANDARD_LIBRARY: DataCatalogEntry[] = [
+  {
+    id: 'std-1',
+    name: '城区影像集',
+    files: ['中心商务区.tif', '老城区.tif', '火车站周边.tif', '科技园.tif', '居民小区.tif'],
+  },
+  {
+    id: 'std-2',
+    name: '港口航拍',
+    files: ['码头A区.tif', '码头B区.tif', '集装箱堆场.tif', '航道水域.tif'],
+  },
+  {
+    id: 'std-3',
+    name: '郊区遥感图',
+    files: ['农田西区.tif', '居民点.tif', '工业区.tif', '湖泊周边.tif', '国道沿线.tif'],
+  },
+  {
+    id: 'std-4',
+    name: '山区地形影像',
+    files: ['北坡林区.tif', '南坡耕地区.tif', '山脊线.tif', '河谷地带.tif'],
+  },
+  {
+    id: 'std-5',
+    name: '水域监测数据',
+    files: ['水库全景.tif', '河流上游.tif', '河流下游.tif', '湿地保护区.tif', '入海口.tif'],
+  },
+  {
+    id: 'std-6',
+    name: '城市热力图',
+    files: ['商业中心.tif', '工业园区.tif', '住宅区.tif', '绿地公园.tif'],
+  },
+  {
+    id: 'std-7',
+    name: '夜间灯光数据',
+    files: ['主城区.tif', '郊区.tif', '交通干线.tif'],
+  },
+  {
+    id: 'std-8',
+    name: '多光谱遥感',
+    files: ['可见光波段.tif', '近红外波段.tif', '热红外波段.tif', '全色波段.tif'],
+  },
+  {
+    id: 'std-9',
+    name: '雷达影像集',
+    files: ['C波段.tif', 'L波段.tif', '干涉数据.tif'],
+  },
+  {
+    id: 'std-10',
+    name: '农田调查数据',
+    files: ['水稻种植区.tif', '小麦种植区.tif', '玉米种植区.tif', '大棚蔬菜区.tif'],
+  },
+];
 
-class Store<T> {
-  private listeners: Set<Listener> = new Set();
-  constructor(private data: T) {}
-  get = (): T => this.data;
-  set = (updater: (prev: T) => T): void => {
-    this.data = updater(this.data);
-    this.listeners.forEach((l) => l());
-  };
-  subscribe = (l: Listener): (() => void) => {
-    this.listeners.add(l);
-    return () => this.listeners.delete(l);
-  };
+export const FUSION_LIBRARY: DataCatalogEntry[] = [
+  {
+    id: 'fus-1',
+    name: '城区+港口融合',
+    files: ['融合影像_A.tif', '融合影像_B.tif', '变化检测图.tif'],
+  },
+  {
+    id: 'fus-2',
+    name: '多波段融合',
+    files: ['真彩色合成.tif', '假彩色合成.tif', '植被指数图.tif'],
+  },
+  {
+    id: 'fus-3',
+    name: '时序分析',
+    files: ['2024Q1.tif', '2024Q2.tif', '2024Q3.tif', '2024Q4.tif', '2025Q1.tif'],
+  },
+  {
+    id: 'fus-4',
+    name: '地形+光谱融合',
+    files: ['坡度分析.tif', '坡向分析.tif', '综合分类.tif'],
+  },
+];
+
+// 供标注任务下拉选择（仅标准库的文件夹）
+export const DATASET_NAMES: string[] = STANDARD_LIBRARY.map((e) => e.name);
+
+// 供标注任务创建时获取图层列表
+export const DATA_DIRECTORY: Record<string, string[]> = {};
+for (const entry of [...STANDARD_LIBRARY, ...FUSION_LIBRARY]) {
+  DATA_DIRECTORY[entry.name] = entry.files;
 }
 
-// -------------------- React Hook --------------------
+// -------------------- 标准化色盘（8色，一行展示） --------------------
 
-export const useStore = <T,>(store: Store<T>): T => {
-  const [, force] = React.useReducer((x) => x + 1, 0);
-  React.useEffect(() => {
-    const unsub = store.subscribe(force);
-    return () => {
-      unsub();
-    };
-  }, [store]);
-  return store.get();
+export const COLOR_PALETTE: string[] = [
+  '#3B82F6', // 蓝
+  '#EF4444', // 红
+  '#10B981', // 绿
+  '#F59E0B', // 橙
+  '#8B5CF6', // 紫
+  '#EC4899', // 粉
+  '#06B6D4', // 青
+  '#64748B', // 灰
+];
+
+export const COLOR_NAMES: Record<string, string> = {
+  '#3B82F6': '蓝',
+  '#EF4444': '红',
+  '#10B981': '绿',
+  '#F59E0B': '橙',
+  '#8B5CF6': '紫',
+  '#EC4899': '粉',
+  '#06B6D4': '青',
+  '#64748B': '灰',
 };
 
-// -------------------- 初始数据 --------------------
+// -------------------- 初始标注任务 --------------------
 
 const initialTasks: AnnotationTask[] = [
   {
     id: genId(),
     name: '城区建筑物标注',
     datasetName: '城区影像集',
-    folderName: '城区影像集',
     description: '针对城区影像集中的建筑物做逐图层轮廓标注',
     createdAt: nowStr(),
     status: '进行中',
@@ -180,11 +234,10 @@ const initialTasks: AnnotationTask[] = [
     id: genId(),
     name: '港口码头标注',
     datasetName: '港口航拍',
-    folderName: '港口航拍',
     description: '标注码头结构、集装箱、船只',
     createdAt: nowStr(),
     status: '已完成',
-    layers: STANDARD_LIBRARY[1].files.map((name) => ({
+    layers: STANDARD_LIBRARY[1].files.map((name, i) => ({
       id: genId(),
       name,
       annotated: true,
@@ -196,6 +249,8 @@ const initialTasks: AnnotationTask[] = [
     ],
   },
 ];
+
+// -------------------- 初始样本类别 --------------------
 
 const initialCategories: SampleCategory[] = [
   {
@@ -224,7 +279,33 @@ const initialCategories: SampleCategory[] = [
   },
 ];
 
-// -------------------- 全局 Store --------------------
+// -------------------- 简易单例状态 --------------------
+
+type Listener = () => void;
+
+class Store<T> {
+  private listeners: Set<Listener> = new Set();
+  constructor(private data: T) {}
+  get = (): T => this.data;
+  set = (updater: (prev: T) => T): void => {
+    this.data = updater(this.data);
+    this.listeners.forEach((l) => l());
+  };
+  subscribe = (l: Listener): (() => void) => {
+    this.listeners.add(l);
+    return () => this.listeners.delete(l);
+  };
+}
 
 export const annotationTaskStore = new Store<AnnotationTask[]>(initialTasks);
 export const sampleCategoryStore = new Store<SampleCategory[]>(initialCategories);
+
+// 数据目录 store（标准库 & 融合库可动态增删）
+export const standardLibraryStore = new Store<DataCatalogEntry[]>(STANDARD_LIBRARY);
+export const fusionLibraryStore = new Store<DataCatalogEntry[]>(FUSION_LIBRARY);
+
+export function useStore<T>(store: Store<T>): T {
+  const [, force] = React.useReducer((x: number) => x + 1, 0);
+  React.useEffect(() => store.subscribe(force), [store]);
+  return store.get();
+}
