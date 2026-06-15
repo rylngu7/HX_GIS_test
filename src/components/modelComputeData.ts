@@ -587,33 +587,106 @@ const buildLayerFromFiles = (fileNames: string[], annotatedFlags: boolean[]) =>
     annotations: [],
   }));
 
+// ---------- 演示数据生成：为"城区建筑物标注"预设标注框 ----------
+const buildDemoBuildingAnnotations = (
+  labelId: string,
+  labelName: string,
+  color: string,
+  count: number,
+  startIdx = 1,
+): AnnotationItem[] => {
+  const items: AnnotationItem[] = [];
+  // 在画布上生成不重叠的框（百分比坐标）
+  // 使用固定的网格布局以保证演示一致性
+  const gridPositions = [
+    [8, 6, 14, 12], [26, 8, 16, 14], [46, 5, 12, 10], [62, 7, 18, 12],
+    [84, 10, 10, 8], [10, 24, 12, 14], [28, 26, 14, 12], [48, 28, 10, 10],
+    [64, 24, 16, 14], [82, 28, 12, 12], [12, 44, 14, 12], [30, 46, 10, 10],
+    [44, 44, 14, 14], [62, 46, 12, 10], [78, 48, 14, 12], [10, 62, 10, 14],
+    [24, 64, 14, 10], [42, 62, 12, 14], [58, 66, 10, 10], [72, 64, 12, 12],
+    [14, 80, 12, 10], [28, 82, 10, 8], [44, 82, 14, 10], [60, 80, 12, 12],
+  ];
+  for (let i = 0; i < Math.min(count, gridPositions.length); i++) {
+    const [x, y, w, h] = gridPositions[(i + startIdx - 1) % gridPositions.length];
+    items.push({
+      id: genId(),
+      labelId,
+      labelName,
+      color,
+      displayName: `${labelName}${startIdx + i}`,
+      xPercent: x,
+      yPercent: y,
+      wPercent: w,
+      hPercent: h,
+    });
+  }
+  return items;
+};
+
 const initialTasks: AnnotationTask[] = [
   {
-    id: genId(),
+    id: 'task-demo-building',
     name: '城区建筑物标注',
     datasetName: '城区影像集',
     description: '针对城区影像集中的建筑物做逐图层轮廓标注',
-    createdAt: nowStr(),
+    createdAt: '2024-11-15 09:23:18',
     status: '进行中',
     // 从多级标准库中提取所有文件
     layers: (() => {
+      // 为每个图层预设一定数量的标注框（演示数据）
+      const buildingLabel = initialLabelGroups[0].children[0]; // 居民楼
+      const officeLabel = initialLabelGroups[0].children[1]; // 写字楼
+      const mallLabel = initialLabelGroups[0].children[2]; // 商场
       const files = [
         '中心城区/中心商务区.tif',
         '中心城区/老城区.tif',
         '科技园区/科技园.tif',
         '居民小区/居民小区.tif',
       ];
-      return buildLayerFromFiles(files, [true, true, false, false]);
+      // 每个图层的标注数量（演示数据）
+      const annCounts = [
+        { building: 0, office: 8, mall: 4 }, // 中心商务区：写字楼+商场多
+        { building: 12, office: 2, mall: 1 }, // 老城区：居民楼多
+        { building: 2, office: 10, mall: 3 }, // 科技园：写字楼多
+        { building: 14, office: 1, mall: 0 }, // 居民小区：居民楼为主
+      ];
+      return files.map((name, i) => ({
+        id: genId(),
+        name,
+        annotated: true,
+        annotations: [
+          ...buildDemoBuildingAnnotations(
+            buildingLabel.id,
+            `建筑物/${buildingLabel.name}`,
+            buildingLabel.color,
+            annCounts[i].building,
+            1,
+          ),
+          ...buildDemoBuildingAnnotations(
+            officeLabel.id,
+            `建筑物/${officeLabel.name}`,
+            officeLabel.color,
+            annCounts[i].office,
+            annCounts[i].building + 1,
+          ),
+          ...buildDemoBuildingAnnotations(
+            mallLabel.id,
+            `建筑物/${mallLabel.name}`,
+            mallLabel.color,
+            annCounts[i].mall,
+            annCounts[i].building + annCounts[i].office + 1,
+          ),
+        ],
+      }));
     })(),
-    // 标签已迁移到全局「标签管理」页面
     labels: [],
   },
   {
-    id: genId(),
+    id: 'task-demo-port',
     name: '港口码头标注',
     datasetName: '港口航拍',
     description: '标注码头结构、集装箱、船只',
-    createdAt: nowStr(),
+    createdAt: '2024-11-12 14:05:32',
     status: '已完成',
     layers: (() => {
       const files = [
@@ -622,7 +695,12 @@ const initialTasks: AnnotationTask[] = [
         '集装箱堆场/集装箱堆场.tif',
         '航道水域/航道水域.tif',
       ];
-      return buildLayerFromFiles(files, [true, true, true, true]);
+      return files.map((name, i) => ({
+        id: genId(),
+        name,
+        annotated: true,
+        annotations: [],
+      }));
     })(),
     labels: [],
   },
@@ -630,32 +708,79 @@ const initialTasks: AnnotationTask[] = [
 
 // -------------------- 初始样本集（命名与标签不同：面向"用途/项目"） --------------------
 
+// ---------- 演示数据：为"城区建筑样本集"生成样本切片 ----------
+const buildBuildingSamples = (): SampleItem[] => {
+  // 从"城区建筑物标注"任务的图层中选取一些标注框作为样本
+  const taskName = '城区建筑物标注';
+  // 正样本：建筑物相关
+  const layersData = [
+    { layer: '中心城区/中心商务区.tif', label: '建筑物/写字楼', count: 6 },
+    { layer: '中心城区/中心商务区.tif', label: '建筑物/商场', count: 3 },
+    { layer: '中心城区/老城区.tif', label: '建筑物/居民楼', count: 10 },
+    { layer: '中心城区/老城区.tif', label: '建筑物/写字楼', count: 1 },
+    { layer: '科技园区/科技园.tif', label: '建筑物/写字楼', count: 8 },
+    { layer: '居民小区/居民小区.tif', label: '建筑物/居民楼', count: 12 },
+  ];
+  // 负样本：非建筑物目标（误识别样本，用于模型区分背景）
+  const negativeData = [
+    { layer: '中心城区/中心商务区.tif', label: '背景/道路', count: 2 },
+    { layer: '中心城区/老城区.tif', label: '背景/绿化', count: 3 },
+    { layer: '居民小区/居民小区.tif', label: '背景/空地', count: 2 },
+  ];
+  const samples: SampleItem[] = [];
+  layersData.forEach(({ layer, label, count }) => {
+    for (let i = 1; i <= count; i++) {
+      samples.push({
+        id: genId(),
+        name: `${label}${i}`,
+        fromTask: taskName,
+        fromLayer: layer,
+        fromLabel: label,
+        extractedAt: '2024-11-18 11:30:25',
+      });
+    }
+  });
+  negativeData.forEach(({ layer, label, count }) => {
+    for (let i = 1; i <= count; i++) {
+      samples.push({
+        id: genId(),
+        name: `${label}${i}`,
+        fromTask: taskName,
+        fromLayer: layer,
+        fromLabel: label,
+        extractedAt: '2024-11-19 09:12:35',
+      });
+    }
+  });
+  return samples;
+};
+
 const initialCategories: SampleCategory[] = [
   {
     id: genId(),
-    name: '城区建筑样本集A',
+    name: '城区建筑样本集',
     color: '#3B82F6',
     description: '面向城区建筑物轮廓检测的训练样本',
-    createdAt: nowStr(),
-    updatedAt: nowStr(),
-    samples: [],
+    createdAt: '2024-11-18 10:15:42',
+    updatedAt: '2024-11-21 17:30:08',
+    samples: buildBuildingSamples(),
   },
   {
     id: genId(),
-    name: '港口设施样本集B',
+    name: '港口设施样本集',
     color: '#10B981',
     description: '面向港口码头、集装箱识别的训练样本',
-    createdAt: nowStr(),
-    updatedAt: nowStr(),
+    createdAt: '2024-11-10 09:12:05',
+    updatedAt: '2024-11-19 14:22:17',
     samples: [],
   },
   {
     id: genId(),
-    name: '车辆检测样本集C',
+    name: '车辆检测样本集',
     color: '#EF4444',
     description: '道路、停车场中的车辆样本',
-    createdAt: nowStr(),
-    updatedAt: nowStr(),
+    createdAt: '2024-11-08 16:45:12',
+    updatedAt: '2024-11-20 10:08:55',
     samples: [],
   },
 ];
