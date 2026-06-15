@@ -627,30 +627,33 @@ const initialTasks: AnnotationTask[] = [
   },
 ];
 
-// -------------------- 初始样本类别 --------------------
+// -------------------- 初始样本集（命名与标签不同：面向"用途/项目"） --------------------
 
 const initialCategories: SampleCategory[] = [
   {
     id: genId(),
-    name: '建筑物',
+    name: '城区建筑样本集A',
     color: '#3B82F6',
-    description: '各类建筑物轮廓样本',
+    description: '面向城区建筑物轮廓检测的训练样本',
+    createdAt: nowStr(),
     updatedAt: nowStr(),
     samples: [],
   },
   {
     id: genId(),
-    name: '码头',
+    name: '港口设施样本集B',
     color: '#10B981',
-    description: '港口码头结构样本',
+    description: '面向港口码头、集装箱识别的训练样本',
+    createdAt: nowStr(),
     updatedAt: nowStr(),
     samples: [],
   },
   {
     id: genId(),
-    name: '汽车',
+    name: '车辆检测样本集C',
     color: '#EF4444',
     description: '道路、停车场中的车辆样本',
+    createdAt: nowStr(),
     updatedAt: nowStr(),
     samples: [],
   },
@@ -725,7 +728,9 @@ export const standardLibraryStore = new Store<DataCatalogEntry[]>(STANDARD_LIBRA
 export const fusionLibraryStore = new Store<DataCatalogEntry[]>(FUSION_LIBRARY);
 
 export function useStore<T>(store: Store<T>): T {
-  const [, force] = React.useReducer((x: number) => x + 1, 0);
-  React.useEffect(() => store.subscribe(force), [store]);
-  return store.get();
+  return React.useSyncExternalStore(
+    store.subscribe,
+    store.get,
+    store.get,
+  );
 }

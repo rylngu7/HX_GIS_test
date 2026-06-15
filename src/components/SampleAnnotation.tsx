@@ -34,8 +34,8 @@ import {
 
 // ==============================================================
 // 样本解译 - 三视图
-// 1. 标注任务列表（默认）
-// 2. 新建标注任务弹窗
+// 1. 标注项目列表（默认）
+// 2. 新建标注项目弹窗
 // 3. 标注工作台（点击任务卡片进入）
 // ==============================================================
 
@@ -94,7 +94,7 @@ const SampleAnnotation: React.FC = () => {
           />
           <input
             type="text"
-            placeholder="输入标注任务名称搜索"
+            placeholder="输入标注项目名称搜索"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -105,7 +105,7 @@ const SampleAnnotation: React.FC = () => {
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
         >
           <Plus size={16} />
-          <span>新建标注任务</span>
+          <span>新建标注项目</span>
         </button>
       </div>
 
@@ -134,7 +134,7 @@ const SampleAnnotation: React.FC = () => {
                   {/* 三点菜单按钮 - 阻止冒泡 */}
                   <div
                     className="relative"
-                    ref={openMenuId === task.id ? menuRef : null}
+                    ref={openMenuId === task.id ? menuRef : undefined}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
@@ -209,7 +209,7 @@ const SampleAnnotation: React.FC = () => {
           {filteredTasks.length === 0 && (
             <div className="col-span-full bg-white border border-dashed border-gray-300 rounded-lg py-16 flex flex-col items-center text-gray-400 text-sm">
               <ImageIcon size={40} className="mb-3" />
-              暂无标注任务，点击右上角新建
+              暂无标注项目，点击右上角新建
             </div>
           )}
         </div>
@@ -272,7 +272,7 @@ const SampleAnnotation: React.FC = () => {
 export default SampleAnnotation;
 
 // ==============================================================
-// 标注任务表单弹窗（支持新建 / 编辑两种模式）
+// 标注项目表单弹窗（支持新建 / 编辑两种模式）
 // ==============================================================
 
 interface TaskFormModalProps {
@@ -304,7 +304,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
   const handleConfirm = () => {
     if (!name.trim()) {
-      alert('请输入标注任务名称');
+      alert('请输入标注项目名称');
       return;
     }
     // 编辑模式下，如果数据集有变化，则同步更新图层列表
@@ -335,7 +335,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-[640px]">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
           <h3 className="text-base font-medium text-gray-800">
-            {mode === 'edit' ? '编辑标注任务' : '新建标注任务'}
+            {mode === 'edit' ? '编辑标注项目' : '新建标注项目'}
           </h3>
           <button
             onClick={onClose}
@@ -347,7 +347,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
         <div className="px-5 py-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              任务名称 <span className="text-red-500">*</span>
+              项目名称 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -412,7 +412,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              placeholder="描述该标注任务的目标和注意事项"
+              placeholder="描述该标注项目的目标和注意事项"
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
@@ -580,7 +580,7 @@ const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div className="bg-white rounded-lg shadow-xl w-[400px]">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
-        <h3 className="text-base font-medium text-gray-800">完成标注任务</h3>
+        <h3 className="text-base font-medium text-gray-800">完成标注项目</h3>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
           <X size={18} />
         </button>
@@ -1138,11 +1138,6 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
                   </div>
                 );
               })}
-            </div>
-            <div className="px-3 pb-3 pt-1 border-t border-gray-100">
-              <div className="text-[11px] text-gray-400 flex items-center gap-1">
-                <span>标签需到「标签管理」页面配置</span>
-              </div>
             </div>
           </div>
 

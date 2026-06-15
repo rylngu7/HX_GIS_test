@@ -58,6 +58,30 @@ const SampleManagement: React.FC = () => {
 
   // 导出反馈（避免使用 alert 导致 React 18 StrictMode 渲染报错）
   const [exportMsg, setExportMsg] = useState<string>('');
+  const exportMsgTimerRef = React.useRef<number | null>(null);
+
+  // 统一的"显示并自动消失"提示工具（不依赖 useEffect 避免死循环）
+  const showExportMsg = React.useCallback((msg: string, ms = 5000) => {
+    if (exportMsgTimerRef.current) {
+      window.clearTimeout(exportMsgTimerRef.current);
+      exportMsgTimerRef.current = null;
+    }
+    setExportMsg(msg);
+    exportMsgTimerRef.current = window.setTimeout(() => {
+      setExportMsg('');
+      exportMsgTimerRef.current = null;
+    }, ms);
+  }, []);
+
+  // 卸载时清理
+  React.useEffect(() => {
+    return () => {
+      if (exportMsgTimerRef.current) {
+        window.clearTimeout(exportMsgTimerRef.current);
+        exportMsgTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const filteredCategories = useMemo(
     () =>
@@ -93,14 +117,14 @@ const SampleManagement: React.FC = () => {
     categoriesToExport: SampleCategory[],
   ) => {
     if (categoriesToExport.length === 0) {
-      setExportMsg('请至少选择一个样本集');
+      showExportMsg('请至少选择一个样本集');
       return;
     }
 
     // 检查是否已执行切片（简化模拟：必须每个样本集都有样本才能导出）
     const notReady = categoriesToExport.filter((c) => c.samples.length === 0);
     if (notReady.length > 0) {
-      setExportMsg('存在尚未执行切片的样本集，无法导出');
+      showExportMsg('存在尚未执行切片的样本集，无法导出');
       return;
     }
 
@@ -147,7 +171,7 @@ const SampleManagement: React.FC = () => {
     }
 
     if (rows.length === 0) {
-      setExportMsg('所选样本集中没有样本切片，无法导出');
+      showExportMsg('所选样本集中没有样本切片，无法导出');
       return;
     }
 
@@ -158,20 +182,13 @@ const SampleManagement: React.FC = () => {
       XLSX.utils.book_append_sheet(wb, ws, '样本导出');
       const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       XLSX.writeFile(wb, `样本导出_${categoriesToExport.length}个样本集_${ts}.xlsx`);
-      setExportMsg(`✓ 导出成功：共 ${rows.length} 个样本切片（GeoJSON格式）`);
+      showExportMsg(`✓ 导出成功：共 ${rows.length} 个样本切片（GeoJSON格式）`);
       // 清除选中
       setSelectedCategoryIds(new Set());
     } catch (e) {
-      setExportMsg('导出失败，请重试');
+      showExportMsg('导出失败，请重试');
     }
   };
-
-  // 5秒后自动清除提示
-  React.useEffect(() => {
-    if (!exportMsg) return;
-    const t = window.setTimeout(() => setExportMsg(''), 5000);
-    return () => window.clearTimeout(t);
-  }, [exportMsg]);
 
   // 详情视图
   if (activeCategory) {
@@ -345,14 +362,13 @@ const SampleManagement: React.FC = () => {
                     <button
                       onClick={() => {
                         if (c.samples.length === 0) {
-                          setExportMsg('该样本集下暂无样本切片，无法执行切片');
-                          setTimeout(() => setExportMsg(''), 2500);
+                          showExportMsg('该样本集下暂无样本切片，无法执行切片', 2500);
                           return;
                         }
-                        setExportMsg(
+                        showExportMsg(
                           `✓ 已对「${c.name}」中 ${c.samples.length} 个样本切片执行 256×256 切片`,
+                          2500,
                         );
-                        setTimeout(() => setExportMsg(''), 2500);
                       }}
                       className="text-amber-600 hover:text-amber-800 flex items-center gap-1"
                       title="执行 256×256 切片"
@@ -537,7 +553,7 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
         <div className="flex-1" />
         <button
           onClick={() => {
-            // 自动纳入：扫描所有标注任务，查找同名标签
+            // 自动纳入：扫描所有标注项目，查找同名标签
             // 匹配规则：annotationItem.labelName === category.name（不区分大小写）
             // （annotationItem.labelName 形如 "建筑物/居民楼"）
             // 每个符合条件的标注框都作为一个独立的样本切片
@@ -605,7 +621,7 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
           className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
         >
           <Plus size={12} />
-          从标注任务导入
+          从标注项目导入
         </button>
       </div>
 
@@ -826,7 +842,7 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
             <ImageIcon size={60} className="mb-3 text-gray-300" />
             <div className="text-sm mb-1">该样本集下暂无样本切片</div>
             <div className="text-xs">
-              可通过「自动纳入同名标签」或「从标注任务导入」来添加
+              可通过「自动纳入同名标签」或「从标注项目导入」来添加
             </div>
           </div>
         ) : (
@@ -1132,7 +1148,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                     已关联样本切片（{samplesDraft.length}）
                   </div>
                   <div className="text-xs text-gray-400 mt-0.5">
-                    自动匹配规则：标注任务中的标签名 = 本类别名
+                    自动匹配规则：标注项目中的标签名 = 本类别名
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1232,11 +1248,11 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
             <div className="px-5 py-4 space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  标注任务
+                  标注项目
                 </label>
                 {tasks.length === 0 ? (
                   <div className="text-xs text-gray-400 border border-gray-200 rounded px-3 py-2">
-                    暂无标注任务，请先到「样本解译」创建
+                    暂无标注项目，请先到「样本解译」创建
                   </div>
                 ) : (
                   <select
