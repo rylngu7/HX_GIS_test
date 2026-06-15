@@ -15,6 +15,8 @@ import {
   Inbox,
   Download,
   Pipette,
+  Scissors,
+  PieChart,
 } from 'lucide-react';
 import {
   SampleCategory,
@@ -341,16 +343,32 @@ const SampleManagement: React.FC = () => {
                       <Edit2 size={12} /> 编辑
                     </button>
                     <button
-                      onClick={() =>
-                        safeExport([c])
-                      }
-                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      onClick={() => {
+                        if (c.samples.length === 0) {
+                          setExportMsg('该样本集下暂无样本切片，无法执行切片');
+                          setTimeout(() => setExportMsg(''), 2500);
+                          return;
+                        }
+                        setExportMsg(
+                          `✓ 已对「${c.name}」中 ${c.samples.length} 个样本切片执行 256×256 切片`,
+                        );
+                        setTimeout(() => setExportMsg(''), 2500);
+                      }}
+                      className="text-amber-600 hover:text-amber-800 flex items-center gap-1"
+                      title="执行 256×256 切片"
+                    >
+                      <Scissors size={12} /> 执行切片
+                    </button>
+                    <button
+                      onClick={() => safeExport([c])}
+                      className="text-green-600 hover:text-green-800 flex items-center gap-1"
+                      title="导出 GeoJSON 格式"
                     >
                       <Download size={12} /> 导出
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`确定删除类别「${c.name}」？`)) {
+                        if (confirm(`确定删除样本集「${c.name}」？`)) {
                           sampleCategoryStore.set((prev) =>
                             prev.filter((x) => x.id !== c.id),
                           );
@@ -443,6 +461,57 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
   const labelSet = new Set(display.samples.map((s) => s.fromLabel));
   const layerSet = new Set(display.samples.map((s) => s.fromLayer));
 
+  // 概览 1：按标签统计的分布
+  const labelDistribution = useMemo(() => {
+    const m = new Map<string, number>();
+    display.samples.forEach((s) => {
+      m.set(s.fromLabel, (m.get(s.fromLabel) || 0) + 1);
+    });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [display.samples]);
+
+  // 概览 2：按图层统计的分布
+  const layerDistribution = useMemo(() => {
+    const m = new Map<string, number>();
+    display.samples.forEach((s) => {
+      m.set(s.fromLayer, (m.get(s.fromLayer) || 0) + 1);
+    });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [display.samples]);
+
+  // 概览 3：按标注项目统计的分布
+  const taskDistribution = useMemo(() => {
+    const m = new Map<string, number>();
+    display.samples.forEach((s) => {
+      m.set(s.fromTask, (m.get(s.fromTask) || 0) + 1);
+    });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [display.samples]);
+
+  // 概览 4：按时间（按天）统计
+  const timeDistribution = useMemo(() => {
+    const m = new Map<string, number>();
+    display.samples.forEach((s) => {
+      const day = (s.extractedAt || '').slice(0, 10); // YYYY-MM-DD
+      if (day) m.set(day, (m.get(day) || 0) + 1);
+    });
+    return [...m.entries()].sort();
+  }, [display.samples]);
+
+  // 图表色板（项目内一致）
+  const CHART_PALETTE = [
+    display.color,
+    '#3B82F6',
+    '#10B981',
+    '#F59E0B',
+    '#EF4444',
+    '#8B5CF6',
+    '#EC4899',
+    '#06B6D4',
+    '#84CC16',
+    '#A855F7',
+  ];
+
   return (
     <div className="h-full bg-gray-50 flex flex-col">
       {/* 顶部 */}
@@ -469,7 +538,8 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
         <button
           onClick={() => {
             // 自动纳入：扫描所有标注任务，查找同名标签
-            // 匹配规则：label.name === category.name（不区分大小写）
+            // 匹配规则：annotationItem.labelName === category.name（不区分大小写）
+            // （annotationItem.labelName 形如 "建筑物/居民楼"）
             // 每个符合条件的标注框都作为一个独立的样本切片
             const targetName = display.name.toLowerCase();
             const existingKeys = new Set(
@@ -479,26 +549,22 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
             );
             const newItems: SampleItem[] = [];
             for (const task of tasks) {
-              for (const label of task.labels) {
-                if (label.name.toLowerCase() === targetName) {
-                  for (const layer of task.layers) {
-                    const anns = layer.annotations || [];
-                    if (anns.length === 0) continue;
-                    for (const a of anns) {
-                      if (a.labelId !== label.id) continue;
-                      const key = `${task.name}|${layer.name}|${label.name}|${a.displayName}`;
-                      if (!existingKeys.has(key)) {
-                        existingKeys.add(key);
-                        newItems.push({
-                          id: genId(),
-                          name: a.displayName,
-                          fromTask: task.name,
-                          fromLayer: layer.name,
-                          fromLabel: label.name,
-                          extractedAt: nowStr(),
-                        });
-                      }
-                    }
+              for (const layer of task.layers) {
+                const anns = layer.annotations || [];
+                if (anns.length === 0) continue;
+                for (const a of anns) {
+                  if (a.labelName.toLowerCase() !== targetName) continue;
+                  const key = `${task.name}|${layer.name}|${a.labelName}|${a.displayName}`;
+                  if (!existingKeys.has(key)) {
+                    existingKeys.add(key);
+                    newItems.push({
+                      id: genId(),
+                      name: a.displayName,
+                      fromTask: task.name,
+                      fromLayer: layer.name,
+                      fromLabel: a.labelName,
+                      extractedAt: nowStr(),
+                    });
                   }
                 }
               }
@@ -548,34 +614,6 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm font-medium text-gray-700">样本集概览</div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (totalSamples === 0) {
-                    alert('请先通过「自动纳入同名标签」或「从标注任务导入」添加样本切片');
-                    return;
-                  }
-                  alert(`已对 ${totalSamples} 个样本切片执行切片操作（256×256），切片完成后可点击导出`);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs rounded hover:bg-amber-100 border border-amber-200"
-              >
-                <span className="inline-block w-5 h-5 rounded-sm bg-amber-500 text-white text-center leading-5 text-[10px] font-mono">256</span>
-                执行切片
-              </button>
-              <button
-                onClick={() => {
-                  if (totalSamples === 0) {
-                    alert('暂无样本切片，无法导出');
-                    return;
-                  }
-                  alert(`即将导出 ${totalSamples} 个样本切片（GeoJSON格式）`);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-              >
-                <Download size={12} />
-                导出（GeoJSON）
-              </button>
-            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="bg-blue-50 border border-blue-100 rounded p-3">
@@ -607,38 +645,174 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
               <div className="text-xl font-semibold text-gray-700">256×256</div>
             </div>
           </div>
-          {/* 标签分布条形图 */}
-          {labelSet.size > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <div className="text-xs text-gray-500 mb-2">标签分布</div>
-              <div className="flex flex-wrap gap-2">
-                {[...labelSet].map((lb) => {
-                  const cnt = display.samples.filter(
-                    (s) => s.fromLabel === lb,
-                  ).length;
-                  const pct = totalSamples > 0 ? (cnt / totalSamples) * 100 : 0;
-                  return (
-                    <div
-                      key={lb}
-                      className="flex items-center gap-1.5 bg-gray-50 rounded px-2 py-1"
-                    >
-                      <span
-                        className="inline-block w-2.5 h-2.5 rounded-sm"
-                        style={{ backgroundColor: display.color }}
-                      />
-                      <span className="text-xs text-gray-600">{lb}</span>
-                      <span className="text-xs font-medium text-gray-700">
-                        {cnt}
-                      </span>
-                      <div className="w-20 h-1.5 bg-gray-200 rounded overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded"
-                          style={{ width: `${pct}%` }}
-                        />
+
+          {/* ============ 统计图第二排（标签 / 图层 / 标注项目 / 时间） ============ */}
+          {totalSamples > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="text-xs font-medium text-gray-700 mb-3 flex items-center gap-1.5">
+                <PieChart size={14} className="text-purple-600" />
+                多维度分布统计
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* 按标签 */}
+                <div className="bg-gray-50/50 border border-gray-100 rounded p-3">
+                  <div className="text-[11px] text-gray-500 mb-2">按标签分布</div>
+                  {labelDistribution.length === 0 ? (
+                    <div className="text-xs text-gray-400">暂无数据</div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {labelDistribution.map(([lb, cnt], i) => {
+                        const pct = totalSamples > 0 ? (cnt / totalSamples) * 100 : 0;
+                        const color = CHART_PALETTE[i % CHART_PALETTE.length];
+                        return (
+                          <div
+                            key={lb}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span className="w-20 truncate text-gray-700" title={lb}>
+                              {lb}
+                            </span>
+                            <div className="flex-1 h-3 bg-white border border-gray-200 rounded overflow-hidden">
+                              <div
+                                className="h-full rounded"
+                                style={{ width: `${pct}%`, backgroundColor: color }}
+                              />
+                            </div>
+                            <span className="w-8 text-right text-gray-700 font-medium">
+                              {cnt}
+                            </span>
+                            <span className="w-10 text-right text-gray-400">
+                              {pct.toFixed(1)}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 按图层 */}
+                <div className="bg-gray-50/50 border border-gray-100 rounded p-3">
+                  <div className="text-[11px] text-gray-500 mb-2">按图层分布</div>
+                  {layerDistribution.length === 0 ? (
+                    <div className="text-xs text-gray-400">暂无数据</div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {layerDistribution.map(([ly, cnt], i) => {
+                        const pct = totalSamples > 0 ? (cnt / totalSamples) * 100 : 0;
+                        const color = CHART_PALETTE[i % CHART_PALETTE.length];
+                        return (
+                          <div
+                            key={ly}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span className="w-20 truncate text-gray-700" title={ly}>
+                              {ly}
+                            </span>
+                            <div className="flex-1 h-3 bg-white border border-gray-200 rounded overflow-hidden">
+                              <div
+                                className="h-full rounded"
+                                style={{ width: `${pct}%`, backgroundColor: color }}
+                              />
+                            </div>
+                            <span className="w-8 text-right text-gray-700 font-medium">
+                              {cnt}
+                            </span>
+                            <span className="w-10 text-right text-gray-400">
+                              {pct.toFixed(1)}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 按标注项目 */}
+                <div className="bg-gray-50/50 border border-gray-100 rounded p-3">
+                  <div className="text-[11px] text-gray-500 mb-2">按标注项目分布</div>
+                  {taskDistribution.length === 0 ? (
+                    <div className="text-xs text-gray-400">暂无数据</div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {taskDistribution.map(([tk, cnt], i) => {
+                        const pct = totalSamples > 0 ? (cnt / totalSamples) * 100 : 0;
+                        const color = CHART_PALETTE[i % CHART_PALETTE.length];
+                        return (
+                          <div
+                            key={tk}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span className="w-20 truncate text-gray-700" title={tk}>
+                              {tk}
+                            </span>
+                            <div className="flex-1 h-3 bg-white border border-gray-200 rounded overflow-hidden">
+                              <div
+                                className="h-full rounded"
+                                style={{ width: `${pct}%`, backgroundColor: color }}
+                              />
+                            </div>
+                            <span className="w-8 text-right text-gray-700 font-medium">
+                              {cnt}
+                            </span>
+                            <span className="w-10 text-right text-gray-400">
+                              {pct.toFixed(1)}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 按时间（柱状图） */}
+                <div className="bg-gray-50/50 border border-gray-100 rounded p-3">
+                  <div className="text-[11px] text-gray-500 mb-2">按时间分布</div>
+                  {timeDistribution.length === 0 ? (
+                    <div className="text-xs text-gray-400">暂无数据</div>
+                  ) : (
+                    <div>
+                      <div className="flex items-end gap-1 h-24 px-1">
+                        {(() => {
+                          const max = Math.max(...timeDistribution.map(([_, c]) => c));
+                          return timeDistribution.map(([day, cnt], i) => {
+                            const h =
+                              max > 0 ? Math.max((cnt / max) * 100, 4) : 4;
+                            const color = CHART_PALETTE[i % CHART_PALETTE.length];
+                            return (
+                              <div
+                                key={day}
+                                className="flex-1 flex flex-col items-center justify-end group relative"
+                              >
+                                <div
+                                  className="w-full rounded-t transition-all hover:opacity-80"
+                                  style={{
+                                    height: `${h}%`,
+                                    backgroundColor: color,
+                                    minHeight: '4px',
+                                  }}
+                                  title={`${day}: ${cnt}个`}
+                                />
+                                <div className="absolute bottom-full mb-1 hidden group-hover:block bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap">
+                                  {day}: {cnt}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                      <div className="flex justify-between mt-1 text-[10px] text-gray-400 px-1">
+                        <span>{timeDistribution[0]?.[0]}</span>
+                        <span>
+                          共 {timeDistribution.length} 个时间点
+                        </span>
+                        <span>
+                          {timeDistribution[timeDistribution.length - 1]?.[0]}
+                        </span>
                       </div>
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
             </div>
           )}

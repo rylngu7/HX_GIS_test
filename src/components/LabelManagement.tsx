@@ -139,17 +139,6 @@ const LabelManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* 提示条 */}
-      <div className="mb-4 bg-blue-50 border border-blue-200 rounded p-3 text-xs text-blue-700 flex items-start gap-2">
-        <Palette size={14} className="flex-shrink-0 mt-0.5" />
-        <div>
-          <span className="font-medium">颜色管理：</span>
-          点击"新建标签分组"可为每个分组设置主题色，点击"一键统一配色"可让所有子标签自动套用
-          <span className="font-medium">同色系</span>颜色；子标签也支持手动单独指定颜色。所有颜色均以 HEX 编号
-          醒目显示，可通过预置颜色或标准调色盘选取。
-        </div>
-      </div>
-
       {/* 分组列表 */}
       <div className="flex-1 overflow-y-auto space-y-3">
         {filteredGroups.length === 0 ? (
@@ -318,6 +307,7 @@ const LabelManagement: React.FC = () => {
               id: genId(),
               name: data.name,
               color: data.color,
+              description: data.description || undefined,
             };
             labelGroupStore.set((prev) =>
               prev.map((g) =>
@@ -364,9 +354,15 @@ const SubLabelCard: React.FC<SubLabelCardProps> = ({ child, group }) => {
         <div className="text-sm font-medium text-gray-800 truncate">
           {child.name}
         </div>
-        <div className="text-[11px] text-gray-400 mt-0.5">
-          隶属于「{group.name}」
-        </div>
+        {child.description ? (
+          <div className="text-[11px] text-gray-500 mt-0.5 truncate" title={child.description}>
+            {child.description}
+          </div>
+        ) : (
+          <div className="text-[11px] text-gray-400 mt-0.5">
+            隶属于「{group.name}」
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
@@ -411,7 +407,12 @@ const SubLabelCard: React.FC<SubLabelCardProps> = ({ child, group }) => {
                       ...g,
                       children: g.children.map((c) =>
                         c.id === child.id
-                          ? { ...c, name: data.name, color: data.color }
+                          ? {
+                              ...c,
+                              name: data.name,
+                              color: data.color,
+                              description: data.description || undefined,
+                            }
                           : c,
                       ),
                       updatedAt: nowStr(),
@@ -579,7 +580,7 @@ interface SubLabelFormModalProps {
   group: LabelGroup;
   initial?: SubLabel;
   onClose: () => void;
-  onSubmit: (data: { name: string; color: string }) => void;
+  onSubmit: (data: { name: string; color: string; description: string }) => void;
 }
 
 const SubLabelFormModal: React.FC<SubLabelFormModalProps> = ({
@@ -592,6 +593,7 @@ const SubLabelFormModal: React.FC<SubLabelFormModalProps> = ({
   const [color, setColor] = useState(
     initial?.color || group.themeColor,
   );
+  const [description, setDescription] = useState(initial?.description || '');
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // 生成同色系推荐
@@ -602,7 +604,7 @@ const SubLabelFormModal: React.FC<SubLabelFormModalProps> = ({
       alert('请输入子标签名称');
       return;
     }
-    onSubmit({ name: name.trim(), color });
+    onSubmit({ name: name.trim(), color, description: description.trim() });
   };
 
   return (
@@ -628,6 +630,19 @@ const SubLabelFormModal: React.FC<SubLabelFormModalProps> = ({
               onChange={(e) => setName(e.target.value)}
               placeholder="例如：居民楼 / 写字楼 / 商场"
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              描述 <span className="text-gray-400 font-normal">（选填）</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="简短描述该子标签的用途或特征"
+              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             />
           </div>
 

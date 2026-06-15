@@ -26,11 +26,11 @@ import {
   DATASET_NAMES,
   COLOR_PALETTE,
   annotationTaskStore,
+  labelGroupStore,
   genId,
   nowStr,
   useStore,
 } from './modelComputeData';
-import ColorPickerModal from './ColorPickerModal';
 
 // ==============================================================
 // 样本解译 - 三视图
@@ -289,8 +289,18 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   onSubmit,
 }) => {
   const [name, setName] = useState(initial?.name || '');
-  const [dataset, setDataset] = useState(initial?.datasetName || DATASET_NAMES[0]);
+  // 多级选择：选中的标准库文件夹路径（用 DataCatalogEntry.id 表示）
+  const [folderId, setFolderId] = useState<string>(() => {
+    if (!initial) return STANDARD_LIBRARY[0].id;
+    const found = findEntryByName(STANDARD_LIBRARY, initial.datasetName);
+    return found ? found.id : STANDARD_LIBRARY[0].id;
+  });
   const [description, setDescription] = useState(initial?.description || '');
+
+  // 推导当前选中的文件夹与它的所有文件
+  const currentFolder = findEntryById(STANDARD_LIBRARY, folderId) || STANDARD_LIBRARY[0];
+  const currentFolderFiles = flattenFiles(currentFolder);
+  const datasetName = currentFolder.name;
 
   const handleConfirm = () => {
     if (!name.trim()) {
@@ -299,31 +309,30 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
     }
     // 编辑模式下，如果数据集有变化，则同步更新图层列表
     const layers: LayerInTask[] =
-      mode === 'edit' && initial && dataset === initial.datasetName
+      mode === 'edit' && initial && datasetName === initial.datasetName
         ? initial.layers
-        : (DATA_DIRECTORY[dataset] || []).map((n) => ({
+        : currentFolderFiles.map((f) => ({
             id: genId(),
-            name: n,
+            name: f.name,
             annotated: false,
             annotations: [],
           }));
-    const labels = mode === 'edit' && initial ? initial.labels : [];
     const task: AnnotationTask = {
       id: initial?.id || genId(),
       name: name.trim(),
-      datasetName: dataset,
+      datasetName,
       description: description.trim() || undefined,
       createdAt: initial?.createdAt || nowStr(),
       status: initial?.status || '进行中',
       layers,
-      labels,
+      labels: initial?.labels || [],
     };
     onSubmit(task);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-[480px]">
+      <div className="bg-white rounded-lg shadow-xl w-[640px]">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
           <h3 className="text-base font-medium text-gray-800">
             {mode === 'edit' ? '编辑标注任务' : '新建标注任务'}
@@ -352,19 +361,47 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               数据集 <span className="text-red-500">*</span>
             </label>
-            <select
-              value={dataset}
-              onChange={(e) => setDataset(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              {DATASET_NAMES.map((d) => (
-                <option key={d} value={d}>
-                  {d}（{(DATA_DIRECTORY[d] || []).length} 个图层）
-                </option>
-              ))}
-            </select>
+            {/* 多级文件夹选择器：左树 + 右数据集预览 */}
+            <div className="border border-gray-200 rounded overflow-hidden flex h-56">
+              {/* 左：多级文件夹树 */}
+              <div className="w-1/2 border-r border-gray-200 bg-gray-50 overflow-y-auto">
+                <div className="px-2 py-1.5 text-[11px] text-gray-500 border-b border-gray-200 bg-white">
+                  数据管理 / 数据目录 / 标准库
+                </div>
+                <FolderTree
+                  entries={STANDARD_LIBRARY}
+                  selectedId={folderId}
+                  onSelect={setFolderId}
+                />
+              </div>
+              {/* 右：当前选中文件夹的文件列表 */}
+              <div className="w-1/2 bg-white overflow-y-auto">
+                <div className="px-2 py-1.5 text-[11px] text-gray-500 border-b border-gray-200 bg-gray-50">
+                  当前数据集：{currentFolder.fullPath}
+                </div>
+                <div className="p-2 space-y-1">
+                  {currentFolder.files.length === 0 ? (
+                    <div className="text-xs text-gray-400 text-center py-6">
+                      该文件夹下暂无文件
+                    </div>
+                  ) : (
+                    currentFolder.files.map((f) => (
+                      <div
+                        key={f.path}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-50 text-xs text-gray-700"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                        <span className="truncate" title={f.path}>
+                          {f.name}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
             <div className="mt-1.5 text-xs text-gray-400">
-              从数据目录标准库中选择 · 包含 {(DATA_DIRECTORY[dataset] || []).length} 个图层：{(DATA_DIRECTORY[dataset] || []).join('、')}
+              数据来源：<span className="text-blue-600">数据管理 / 数据目录 / 标准库 / {currentFolder.fullPath}</span> · 共 {currentFolderFiles.length} 个图层
             </div>
           </div>
           <div>
@@ -397,6 +434,132 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
       </div>
     </div>
   );
+};
+
+// ==================== 多级文件夹树形组件 ====================
+interface FolderTreeProps {
+  entries: import('./modelComputeData').DataCatalogEntry[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  level?: number;
+}
+
+const FolderTree: React.FC<FolderTreeProps> = ({
+  entries,
+  selectedId,
+  onSelect,
+  level = 0,
+}) => {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
+    // 默认展开第一个分支，方便查看多级
+    const init: Record<string, boolean> = {};
+    if (entries.length > 0) {
+      // 一级全部展开
+      entries.forEach((e) => {
+        init[e.id] = true;
+      });
+    }
+    return init;
+  });
+
+  return (
+    <div>
+      {entries.map((e) => {
+        const isOpen = expanded[e.id] ?? true;
+        const isSelected = e.id === selectedId;
+        const hasChildren = e.children.length > 0;
+        return (
+          <div key={e.id}>
+            <div
+              onClick={() => onSelect(e.id)}
+              className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer text-xs hover:bg-white ${
+                isSelected
+                  ? 'bg-blue-50 text-blue-700 font-medium'
+                  : 'text-gray-700'
+              }`}
+              style={{ paddingLeft: 6 + level * 14 }}
+            >
+              {hasChildren ? (
+                <span
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setExpanded((prev) => ({
+                      ...prev,
+                      [e.id]: !(prev[e.id] ?? true),
+                    }));
+                  }}
+                  className="text-gray-400 hover:text-gray-700 w-3 flex-shrink-0"
+                >
+                  {isOpen ? '▾' : '▸'}
+                </span>
+              ) : (
+                <span className="w-3 flex-shrink-0" />
+              )}
+              <span className="flex-shrink-0 text-[11px]">📁</span>
+              <span className="truncate">{e.name}</span>
+              {e.files.length > 0 && (
+                <span className="text-[10px] text-gray-400 ml-auto">
+                  {e.files.length}
+                </span>
+              )}
+            </div>
+            {hasChildren && isOpen && (
+              <FolderTree
+                entries={e.children}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                level={level + 1}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ==================== 辅助：按 id 找目录项并附 fullPath ====================
+type FolderEntryWithPath = import('./modelComputeData').DataCatalogEntry & {
+  fullPath: string;
+};
+
+const findEntryById = (
+  entries: import('./modelComputeData').DataCatalogEntry[],
+  id: string,
+  parentPath = '',
+): FolderEntryWithPath | null => {
+  for (const e of entries) {
+    const here = parentPath ? `${parentPath}/${e.name}` : e.name;
+    if (e.id === id) return { ...e, fullPath: here };
+    const found = findEntryById(e.children, id, here);
+    if (found) return found;
+  }
+  return null;
+};
+
+const findEntryByName = (
+  entries: import('./modelComputeData').DataCatalogEntry[],
+  name: string,
+): import('./modelComputeData').DataCatalogEntry | null => {
+  for (const e of entries) {
+    if (e.name === name) return e;
+    const found = findEntryByName(e.children, name);
+    if (found) return found;
+  }
+  return null;
+};
+
+const flattenFiles = (
+  entry: import('./modelComputeData').DataCatalogEntry,
+): import('./modelComputeData').DataFileNode[] => {
+  const acc: import('./modelComputeData').DataFileNode[] = [];
+  const walk = (e: import('./modelComputeData').DataCatalogEntry, p: string) => {
+    const here = p ? `${p}/${e.name}` : e.name;
+    for (const f of e.files) acc.push({ path: `${here}/${f}`, name: f });
+    for (const c of e.children) walk(c, here);
+  };
+  walk(entry, '');
+  return acc;
 };
 
 // ==============================================================
@@ -461,18 +624,29 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
   onBack,
   onRequestComplete,
 }) => {
+  const labelGroups = useStore(labelGroupStore);
+  // 展平为「子标签」列表，数据来源于标签管理页面的全局分组
+  const availableLabels: Label[] = React.useMemo(
+    () =>
+      labelGroups.flatMap((g) =>
+        g.children.map((c) => ({
+          id: c.id,
+          name: `${g.name}/${c.name}`,
+          color: c.color,
+        })),
+      ),
+    [labelGroups],
+  );
+
   const [currentLayerIdx, setCurrentLayerIdx] = useState(0);
   const [activeTool, setActiveTool] = useState<'box' | 'polygon' | null>(
     null,
   );
-  const [newLabelName, setNewLabelName] = useState('');
-  const [newLabelColor, setNewLabelColor] = useState(COLOR_PALETTE[0]);
-  const [labelColorPickerOpen, setLabelColorPickerOpen] = useState(false);
   const [savedTip, setSavedTip] = useState(false);
 
   // ---- 标注流程状态 ----
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(
-    task.labels[0]?.id || null,
+    availableLabels[0]?.id || null,
   );
   // 本地工作副本（从 task.layers[].annotations 读取已有标注）
   const [annotationsByLayer, setAnnotationsByLayer] = useState<
@@ -488,7 +662,7 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
   const [labelCounter, setLabelCounter] = useState<Record<string, number>>(
     () => {
       const c: Record<string, number> = {};
-      task.labels.forEach((l) => {
+      availableLabels.forEach((l) => {
         c[l.id] = 0;
       });
       // 从已有标注的 displayName 后缀提取最大序号
@@ -553,37 +727,6 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
     setTimeout(() => setSavedTip(false), 1200);
   };
 
-  const addLabel = () => {
-    const name = newLabelName.trim();
-    if (!name) return;
-    if (task.labels.some((l) => l.name === name)) {
-      alert('该标签已存在');
-      return;
-    }
-    const newLabel: Label = { id: genId(), name, color: newLabelColor };
-    annotationTaskStore.set((prev) =>
-      prev.map((t) =>
-        t.id === task.id ? { ...t, labels: [...t.labels, newLabel] } : t,
-      ),
-    );
-    // 给新标签初始化计数
-    setLabelCounter((prev) => ({ ...prev, [newLabel.id]: 0 }));
-    setNewLabelName('');
-  };
-
-  const deleteLabel = (labelId: string) => {
-    annotationTaskStore.set((prev) =>
-      prev.map((t) =>
-        t.id === task.id
-          ? { ...t, labels: t.labels.filter((l) => l.id !== labelId) }
-          : t,
-      ),
-    );
-    if (selectedLabelId === labelId) {
-      setSelectedLabelId(task.labels.find((l) => l.id !== labelId)?.id || null);
-    }
-  };
-
   // ---- 标注流程工具函数 ----
   const handleToolSelect = (tool: 'box' | 'polygon') => {
     setActiveTool(activeTool === tool ? null : tool);
@@ -631,7 +774,7 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
       return;
     }
 
-    const label = task.labels.find((l) => l.id === selectedLabelId);
+    const label = availableLabels.find((l) => l.id === selectedLabelId);
     if (!label) return;
 
     // 生成序号
@@ -691,7 +834,7 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
     : !selectedLabelId
       ? '请选择一个标签'
       : dragStart
-        ? `松开鼠标完成「${task.labels.find((l) => l.id === selectedLabelId)?.name}」标注`
+        ? `松开鼠标完成「${availableLabels.find((l) => l.id === selectedLabelId)?.name}」标注`
         : `工具：${activeTool === 'box' ? '框选' : '多边形'} · 在画布上按下鼠标并拖拽绘制`;
 
   // 计算正在拖拽的预览框位置
@@ -871,11 +1014,11 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
                   width: `${previewBox.w}%`,
                   height: `${previewBox.h}%`,
                   borderColor:
-                    task.labels.find((l) => l.id === selectedLabelId)?.color ||
-                    '#3B82F6',
+                    availableLabels.find((l) => l.id === selectedLabelId)
+                      ?.color || '#3B82F6',
                   backgroundColor: `${
-                    task.labels.find((l) => l.id === selectedLabelId)?.color ||
-                    '#3B82F6'
+                    availableLabels.find((l) => l.id === selectedLabelId)
+                      ?.color || '#3B82F6'
                   }22`,
                 }}
               />
@@ -906,12 +1049,12 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
                     className="inline-block w-2.5 h-2.5 rounded-sm"
                     style={{
                       backgroundColor:
-                        task.labels.find((l) => l.id === selectedLabelId)
+                        availableLabels.find((l) => l.id === selectedLabelId)
                           ?.color || '#ccc',
                     }}
                   />
                   <span className="text-gray-700">
-                    {task.labels.find((l) => l.id === selectedLabelId)?.name}
+                    {availableLabels.find((l) => l.id === selectedLabelId)?.name}
                   </span>
                   <span className="text-gray-400">·</span>
                   <span>{activeTool === 'box' ? '框选工具' : '多边形工具'}</span>
@@ -957,19 +1100,19 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
             </div>
           </div>
 
-          {/* 段 2：标签管理 - 可点击选中 */}
+          {/* 段 2：标签选择 - 只读自标签管理页面 */}
           <div className="border-b border-gray-200 flex-1 overflow-y-auto">
             <div className="px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50 flex items-center justify-between">
-              <span>标签管理</span>
-              <span className="text-gray-500">{task.labels.length} 个</span>
+              <span>标签选择</span>
+              <span className="text-gray-500">{availableLabels.length} 个</span>
             </div>
             <div className="px-3 py-2 space-y-1.5">
-              {task.labels.length === 0 && (
+              {availableLabels.length === 0 && (
                 <div className="text-xs text-gray-400 py-2 text-center">
-                  请先新建标签
+                  暂无标签，请到「标签管理」页面配置
                 </div>
               )}
-              {task.labels.map((lb) => {
+              {availableLabels.map((lb) => {
                 const isSelected = selectedLabelId === lb.id;
                 const count = labelCounter[lb.id] || 0;
                 return (
@@ -992,69 +1135,13 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
                     <span className="text-[10px] text-gray-400">
                       {count > 0 ? `${count}个` : ''}
                     </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteLabel(lb.id);
-                      }}
-                      className="text-gray-400 hover:text-red-500 transition-opacity"
-                    >
-                      <Trash2 size={11} />
-                    </button>
                   </div>
                 );
               })}
             </div>
-
-            {/* 新建标签 */}
             <div className="px-3 pb-3 pt-1 border-t border-gray-100">
-              <div className="text-xs text-gray-500 mb-1.5">新建标签</div>
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={newLabelName}
-                  onChange={(e) => setNewLabelName(e.target.value)}
-                  placeholder="名称"
-                  className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={addLabel}
-                  className="px-2.5 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
-                >
-                  +
-                </button>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded border border-gray-300 flex-shrink-0"
-                  style={{ backgroundColor: newLabelColor }}
-                />
-                <button
-                  onClick={() => setLabelColorPickerOpen(true)}
-                  className="text-xs text-blue-600 hover:text-blue-800"
-                >
-                  打开上色工具
-                </button>
-                <span className="text-xs text-gray-400 font-mono">
-                  {newLabelColor}
-                </span>
-              </div>
-              <div className="mt-1.5 flex items-center gap-1 flex-wrap">
-                <span className="text-xs text-gray-400 flex-shrink-0">
-                  快速：
-                </span>
-                {COLOR_PALETTE.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setNewLabelColor(c)}
-                    className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                      newLabelColor === c
-                        ? 'border-gray-700 scale-110'
-                        : 'border-white ring-1 ring-gray-200'
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
+              <div className="text-[11px] text-gray-400 flex items-center gap-1">
+                <span>标签需到「标签管理」页面配置</span>
               </div>
             </div>
           </div>
@@ -1090,12 +1177,6 @@ const AnnotationWorkbench: React.FC<AnnotationWorkbenchProps> = ({
             )}
           </div>
         </div>
-        <ColorPickerModal
-          isOpen={labelColorPickerOpen}
-          onClose={() => setLabelColorPickerOpen(false)}
-          onSelect={(c) => setNewLabelColor(c)}
-          initialColor={newLabelColor}
-        />
       </div>
     </div>
   );
