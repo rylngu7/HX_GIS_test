@@ -92,6 +92,7 @@ interface PaginationProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  title?: string;
 }
 
 const Pagination: React.FC<PaginationProps> = ({
@@ -100,6 +101,7 @@ const Pagination: React.FC<PaginationProps> = ({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  title,
 }) => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -109,9 +111,14 @@ const Pagination: React.FC<PaginationProps> = ({
   const startIdx = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const endIdx = Math.min(safePage * pageSize, total);
 
+  const borderClass = title ? 'border-b' : 'border-t';
+
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-600">
+    <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${borderClass} border-gray-200 bg-gray-50 text-xs text-gray-600`}>
       <div className="flex items-center gap-3">
+        {title && (
+          <div className="text-sm font-medium text-gray-700">{title}</div>
+        )}
         <div>
           共 <span className="font-semibold text-gray-800">{total}</span> 条
         </div>
@@ -925,7 +932,7 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
 
   // 三级页面分页
   const [page3, setPage3] = useState(1);
-  const [pageSize3, setPageSize3] = useState(20);
+  const [pageSize3, setPageSize3] = useState(10);
   React.useEffect(() => {
     setPage3(1);
   }, [display.id, layerName, annotations.length]);
@@ -992,24 +999,24 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
         <span className="text-sm font-semibold text-gray-800">
           {display.name} / {layerName}
         </span>
-        {taskName && (
-          <span className="text-xs text-gray-400 ml-auto">
-            来源标注项目：{taskName}
-          </span>
-        )}
       </div>
 
       {/* 该图层下的标注信息列表 */}
       <div className="p-4">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <div className="text-sm font-medium text-gray-700">
-              该图层下的标注信息
-            </div>
-            <div className="text-xs text-gray-500">
-              共 {annotations.length} 条
-            </div>
-          </div>
+          {annotations.length > 0 && (
+            <Pagination
+              total={annotations.length}
+              page={page3}
+              pageSize={pageSize3}
+              onPageChange={setPage3}
+              onPageSizeChange={(s) => {
+                setPageSize3(s);
+                setPage3(1);
+              }}
+              title="该图层下的标注信息"
+            />
+          )}
           {annotations.length === 0 ? (
             <div className="text-xs text-gray-400 py-12 text-center">
               该图层下暂无标注信息
@@ -1122,18 +1129,6 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                 ))}
               </tbody>
             </table>
-          )}
-          {annotations.length > 0 && (
-            <Pagination
-              total={annotations.length}
-              page={page3}
-              pageSize={pageSize3}
-              onPageChange={setPage3}
-              onPageSizeChange={(s) => {
-                setPageSize3(s);
-                setPage3(1);
-              }}
-            />
           )}
         </div>
       </div>
