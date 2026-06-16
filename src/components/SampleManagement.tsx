@@ -5,6 +5,9 @@ import {
   Plus,
   Image as ImageIcon,
   ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Trash2,
   Edit2,
   CheckSquare,
@@ -76,6 +79,108 @@ const buildLayerStats = (category: SampleCategory, tasks: AnnotationTask[]) => {
 };
 
 // ==============================================================
+// 标准化分页组件（可复用）
+// - 每页数量可选 10 / 20 / 50 / 100
+// - 首页 / 上一页 / 下一页 / 末页
+// - 显示"共 X 条 / 共 Y 页"
+// - 页码变化、每页数量变化均通过回调抛出
+// ==============================================================
+
+interface PaginationProps {
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
+}
+
+const Pagination: React.FC<PaginationProps> = ({
+  total,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+}) => {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageSizeOptions = [10, 20, 50, 100];
+
+  // 起始序号 / 结束序号
+  const startIdx = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endIdx = Math.min(safePage * pageSize, total);
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-600">
+      <div className="flex items-center gap-3">
+        <div>
+          共 <span className="font-semibold text-gray-800">{total}</span> 条
+        </div>
+        <div className="flex items-center gap-2">
+          <span>每页</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              const newSize = parseInt(e.target.value, 10);
+              onPageSizeChange?.(newSize);
+            }}
+            className="px-2 py-1 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {pageSizeOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          <span>条</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <span className="text-gray-500 mr-2">
+          第 {startIdx}-{endIdx} 条 / 共 {totalPages} 页
+        </span>
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={safePage === 1}
+          className="p-1.5 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="首页"
+        >
+          <ChevronsLeft size={14} />
+        </button>
+        <button
+          onClick={() => onPageChange(safePage - 1)}
+          disabled={safePage === 1}
+          className="p-1.5 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="上一页"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <div className="px-2 py-1 bg-white border border-gray-300 rounded min-w-[60px] text-center">
+          <span className="font-semibold text-gray-800">{safePage}</span>
+          <span className="text-gray-400"> / {totalPages}</span>
+        </div>
+        <button
+          onClick={() => onPageChange(safePage + 1)}
+          disabled={safePage >= totalPages}
+          className="p-1.5 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="下一页"
+        >
+          <ChevronRight size={14} />
+        </button>
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={safePage >= totalPages}
+          className="p-1.5 border border-gray-300 rounded bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="末页"
+        >
+          <ChevronsRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ==============================================================
 // 样本管理主入口
 // ==============================================================
 
@@ -98,6 +203,10 @@ const SampleManagement: React.FC<{
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(
     new Set(),
   );
+
+  // 一级页面分页状态
+  const [page1, setPage1] = useState(1);
+  const [pageSize1, setPageSize1] = useState(20);
 
   const [exportMsg, setExportMsg] = useState<string>('');
   const exportMsgTimerRef = React.useRef<number | null>(null);
@@ -123,12 +232,23 @@ const SampleManagement: React.FC<{
     };
   }, []);
 
+  // 搜索/过滤变化时，重置页码到 1
+  React.useEffect(() => {
+    setPage1(1);
+  }, [searchQuery, categories.length]);
+
   const filteredCategories = useMemo(
     () =>
       categories.filter((c) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()),
       ),
     [categories, searchQuery],
+  );
+
+  // 分页数据
+  const pagedCategories = useMemo(
+    () => filteredCategories.slice((page1 - 1) * pageSize1, page1 * pageSize1),
+    [filteredCategories, page1, pageSize1],
   );
 
   const activeCategory =
@@ -356,7 +476,7 @@ const SampleManagement: React.FC<{
                 </td>
               </tr>
             )}
-            {filteredCategories.map((c) => {
+            {pagedCategories.map((c) => {
               const { positive, negative } = countPositiveNegative(c.samples, c.name);
               const annotCount = countAnnotationsForCategory(c, tasks);
               return (
@@ -456,6 +576,16 @@ const SampleManagement: React.FC<{
             })}
           </tbody>
         </table>
+        <Pagination
+          total={filteredCategories.length}
+          page={page1}
+          pageSize={pageSize1}
+          onPageChange={setPage1}
+          onPageSizeChange={(s) => {
+            setPageSize1(s);
+            setPage1(1);
+          }}
+        />
       </div>
 
       {categoryModal && (
@@ -536,6 +666,32 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
     () => buildLayerStats(display, tasks),
     [display, tasks],
   );
+
+  // 二级页面分页
+  const [page2, setPage2] = useState(1);
+  const [pageSize2, setPageSize2] = useState(20);
+  React.useEffect(() => {
+    setPage2(1);
+  }, [display.id, tasks.length]);
+  const pagedLayerStats = useMemo(
+    () => layerStats.slice((page2 - 1) * pageSize2, page2 * pageSize2),
+    [layerStats, page2, pageSize2],
+  );
+
+  // 删除该图层下所有样本切片（将它们从样本集中移除）
+  const handleDeleteLayer = (layerName: string) => {
+    if (!confirm(`确定从「${display.name}」中移除图层「${layerName}」下的所有标注信息？`)) return;
+    sampleCategoryStore.set((prev) =>
+      prev.map((c) => {
+        if (c.id !== display.id) return c;
+        return {
+          ...c,
+          samples: c.samples.filter((s) => s.fromLayer !== layerName),
+          updatedAt: nowStr(),
+        };
+      }),
+    );
+  };
 
   return (
     <div className="h-full bg-gray-50 flex flex-col overflow-y-auto">
@@ -633,10 +789,13 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                   <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs w-24">
                     切片状态
                   </th>
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs w-24">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {layerStats.map((ls, idx) => {
+                {pagedLayerStats.map((ls, idx) => {
                   const isSliced = ls.slices > 0;
                   return (
                     <tr
@@ -644,7 +803,7 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       <td className="py-2.5 px-4 text-gray-400 text-xs">
-                        {idx + 1}
+                        {(page2 - 1) * pageSize2 + idx + 1}
                       </td>
                       <td className="py-2.5 px-4 text-gray-700 text-xs whitespace-nowrap">
                         <button
@@ -675,11 +834,32 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                           </span>
                         )}
                       </td>
+                      <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteLayer(ls.name)}
+                          className="text-red-500 hover:text-red-700 flex items-center justify-center gap-1 text-xs whitespace-nowrap mx-auto"
+                          title="将该图层下所有标注信息从样本集中移除"
+                        >
+                          <Trash2 size={12} /> 删除
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          )}
+          {layerStats.length > 0 && (
+            <Pagination
+              total={layerStats.length}
+              page={page2}
+              pageSize={pageSize2}
+              onPageChange={setPage2}
+              onPageSizeChange={(s) => {
+                setPageSize2(s);
+                setPage2(1);
+              }}
+            />
           )}
         </div>
       </div>
@@ -742,6 +922,17 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
       taskName: targetTask.name,
     };
   }, [tasks, display.samples, layerName]);
+
+  // 三级页面分页
+  const [page3, setPage3] = useState(1);
+  const [pageSize3, setPageSize3] = useState(20);
+  React.useEffect(() => {
+    setPage3(1);
+  }, [display.id, layerName, annotations.length]);
+  const pagedAnnotations = useMemo(
+    () => annotations.slice((page3 - 1) * pageSize3, page3 * pageSize3),
+    [annotations, page3, pageSize3],
+  );
 
   // 删除单个标注
   const handleDelete = (annotationId: string) => {
@@ -857,13 +1048,13 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {annotations.map((a, idx) => (
+                {pagedAnnotations.map((a, idx) => (
                   <tr
                     key={a.id}
                     className="border-b border-gray-100 hover:bg-gray-50"
                   >
                     <td className="py-2.5 px-4 text-gray-400 text-xs whitespace-nowrap">
-                      {idx + 1}
+                      {(page3 - 1) * pageSize3 + idx + 1}
                     </td>
                     <td className="py-2.5 px-4 whitespace-nowrap">
                       <button
@@ -931,6 +1122,18 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                 ))}
               </tbody>
             </table>
+          )}
+          {annotations.length > 0 && (
+            <Pagination
+              total={annotations.length}
+              page={page3}
+              pageSize={pageSize3}
+              onPageChange={setPage3}
+              onPageSizeChange={(s) => {
+                setPageSize3(s);
+                setPage3(1);
+              }}
+            />
           )}
         </div>
       </div>
