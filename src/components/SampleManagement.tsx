@@ -1004,24 +1004,17 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
       {/* 该图层下的标注信息列表 */}
       <div className="p-4">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          {annotations.length > 0 && (
-            <Pagination
-              total={annotations.length}
-              page={page3}
-              pageSize={pageSize3}
-              onPageChange={setPage3}
-              onPageSizeChange={(s) => {
-                setPageSize3(s);
-                setPage3(1);
-              }}
-              title="该图层下的标注信息"
-            />
-          )}
+          <div className="px-4 py-3 border-b border-gray-100">
+            <div className="text-sm font-medium text-gray-700">
+              该图层下的标注信息
+            </div>
+          </div>
           {annotations.length === 0 ? (
             <div className="text-xs text-gray-400 py-12 text-center">
               该图层下暂无标注信息
             </div>
           ) : (
+            <>
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -1129,6 +1122,17 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                 ))}
               </tbody>
             </table>
+            <Pagination
+              total={annotations.length}
+              page={page3}
+              pageSize={pageSize3}
+              onPageChange={setPage3}
+              onPageSizeChange={(s) => {
+                setPageSize3(s);
+                setPage3(1);
+              }}
+            />
+            </>
           )}
         </div>
       </div>
