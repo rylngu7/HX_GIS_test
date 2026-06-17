@@ -72,14 +72,10 @@ export interface AnnotationTask {
 
 export interface SampleItem {
   id: string;
-  name: string;         // 切片名，如"中心商务区_r03_c12"
-  fromTask: string;     // 来源标注项目
-  fromLayer: string;    // 来源图层
-  row: number;          // 在大图中的行号（用于定位）
-  col: number;          // 在大图中的列号（用于定位）
-  hasAnnotation: boolean; // 核心：该切片是否含标注框（true=正样本，false=负样本）
-  annotCount: number;   // 切片内包含的标注框数量（统计用）
-  fromLabel?: string;   // 可选：切片内最主要的标签名（快速展示用）
+  name: string;         // 切片名称，如"建筑物1"
+  fromTask: string;
+  fromLayer: string;
+  fromLabel: string;
   extractedAt: string;
 }
 
@@ -90,10 +86,7 @@ export interface SampleCategory {
   description?: string;
   createdAt: string;
   updatedAt: string;
-  isSliced: boolean;    // 是否已执行切片
-  gridSize: number;     // 切片网格大小（如 10 → 10×10=100 张切片）
-  skipSolid: boolean;   // 是否跳过纯色/无内容子图（默认 true）
-  skipCount: number;    // 已跳过的纯色子图数量（用于角标提示）
+  isSliced: boolean; // 是否已执行切片
   samples: SampleItem[];
 }
 
