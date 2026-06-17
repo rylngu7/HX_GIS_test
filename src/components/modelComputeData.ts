@@ -50,6 +50,20 @@ export interface AnnotationItem {
   yPercent: number;
   wPercent: number;
   hPercent: number;
+  // 切片归属（执行切片时计算）
+  sliceId?: string;     // 所属切片 id，如 "r0_c0"
+  sliceRow?: number;   // 切片行号（从 0 开始）
+  sliceCol?: number;   // 切片列号（从 0 开始）
+}
+
+// 单个切片（一块 256×256 子图）
+export interface SliceItem {
+  id: string;          // 切片 id，如 "r0_c0"
+  name: string;        // 切片名，如 "r0_c0"
+  row: number;         // 行号
+  col: number;         // 列号
+  annotationIds: string[]; // 该切片内含的标注框 id 列表
+  blank?: boolean;     // 是否为纯色（无可用内容）的切片
 }
 
 export interface LayerInTask {
@@ -57,6 +71,10 @@ export interface LayerInTask {
   name: string;
   annotated: boolean;
   annotations: AnnotationItem[];  // 该图层上的标注框
+  slices?: SliceItem[];           // 该图层执行切片后产生的切片列表
+  sliceSize?: number;             // 切片边长（默认 256）
+  sliceRows?: number;             // 网格行数
+  sliceCols?: number;             // 网格列数
 }
 
 export interface AnnotationTask {
@@ -580,12 +598,59 @@ export const COLOR_NAMES: Record<string, string> = {
 
 // -------------------- 初始标注任务 --------------------
 
+// 默认切片网格（4x4 = 16 个 256x256 子图）
+const DEFAULT_SLICE_GRID = { rows: 4, cols: 4, size: 256 } as const;
+
+// 为图层执行切片（生成 SliceItem + 反向索引到 annotation.sliceId）
+const sliceLayer = (layer: LayerInTask, grid = DEFAULT_SLICE_GRID) => {
+  const cellW = 100 / grid.cols;
+  const cellH = 100 / grid.rows;
+  const slices: SliceItem[] = [];
+  const indexMap = new Map<string, string[]>();
+  for (let r = 0; r < grid.rows; r++) {
+    for (let c = 0; c < grid.cols; c++) {
+      slices.push({
+        id: `r${r}_c${c}`,
+        name: `r${r}_c${c}`,
+        row: r,
+        col: c,
+        annotationIds: [],
+        blank: false,
+      });
+    }
+  }
+  for (const a of layer.annotations) {
+    // 用标注框中心点落入的格子作为归属切片
+    const cx = a.xPercent + a.wPercent / 2;
+    const cy = a.yPercent + a.hPercent / 2;
+    const c = Math.min(grid.cols - 1, Math.max(0, Math.floor(cx / cellW)));
+    const r = Math.min(grid.rows - 1, Math.max(0, Math.floor(cy / cellH)));
+    const sid = `r${r}_c${c}`;
+    a.sliceRow = r;
+    a.sliceCol = c;
+    a.sliceId = sid;
+    const arr = indexMap.get(sid) || [];
+    arr.push(a.id);
+    indexMap.set(sid, arr);
+  }
+  for (const s of slices) {
+    const ids = indexMap.get(s.id) || [];
+    s.annotationIds = ids;
+    s.blank = ids.length === 0;
+  }
+  layer.slices = slices;
+  layer.sliceSize = grid.size;
+  layer.sliceRows = grid.rows;
+  layer.sliceCols = grid.cols;
+};
+
 const buildLayerFromFiles = (fileNames: string[], annotatedFlags: boolean[]) =>
   fileNames.map((name, i) => ({
     id: genId(),
     name,
     annotated: i < annotatedFlags.filter(Boolean).length,
     annotations: [],
+    slices: [],
   }));
 
 // ---------- 演示数据生成：为"城区建筑物标注"预设标注框 ----------
@@ -718,6 +783,7 @@ const initialTasks: AnnotationTask[] = [
             annCounts[i].building + annCounts[i].office + 1,
           ),
         ],
+        slices: [],
       }));
     })(),
     labels: [],
@@ -741,11 +807,21 @@ const initialTasks: AnnotationTask[] = [
         name,
         annotated: true,
         annotations: [],
+        slices: [],
       }));
     })(),
     labels: [],
   },
 ];
+
+// 对所有任务的图层执行 256x256 切片
+initialTasks.forEach((t) => {
+  t.layers.forEach((l) => {
+    if ((l.annotations || []).length > 0) {
+      sliceLayer(l);
+    }
+  });
+});
 
 // -------------------- 初始样本集（命名与标签不同：面向"用途/项目"） --------------------
 

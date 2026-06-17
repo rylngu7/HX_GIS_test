@@ -23,6 +23,7 @@ import {
   SampleItem,
   AnnotationTask,
   AnnotationItem,
+  SliceItem,
   annotationTaskStore,
   sampleCategoryStore,
   genId,
@@ -890,12 +891,13 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
     (c) => c.id === category.id,
   );
   const display = liveCategory || category;
-  // 放大查看的标注
-  const [previewing, setPreviewing] = useState<AnnotationItem | null>(null);
+  // 放大查看的切片
+  const [previewing, setPreviewing] = useState<SliceItem | null>(null);
+  // 展开查看某切片内含的标注
+  const [expandedSliceId, setExpandedSliceId] = useState<string | null>(null);
 
-  // 从关联任务中找出该图层下的所有标注
-  const { annotations, taskId, taskName } = useMemo(() => {
-    // 先通过样本切片关联的任务名找到任务
+  // 从关联任务中找出该图层
+  const { targetLayer, taskId, taskName } = useMemo(() => {
     const layerSamples = display.samples.filter(
       (s) => s.fromLayer === layerName,
     );
@@ -904,54 +906,62 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
     let targetTask: AnnotationTask | undefined = tasks.find(
       (t) => t.name === candidateTaskName,
     );
-    // 如果按样本切片找不着，则遍历所有任务找到同名图层
     if (!targetTask) {
       targetTask = tasks.find((t) =>
         t.layers.some((l) => l.name === layerName),
       );
     }
     if (!targetTask) {
-      return { annotations: [], taskId: '', taskName: '' };
+      return { targetLayer: null, taskId: '', taskName: '' };
     }
-    const targetLayer = targetTask.layers.find(
-      (l) => l.name === layerName,
-    );
-    return {
-      annotations: (targetLayer?.annotations || []).slice(),
-      taskId: targetTask.id,
-      taskName: targetTask.name,
-    };
+    const layer = targetTask.layers.find((l) => l.name === layerName) || null;
+    return { targetLayer: layer, taskId: targetTask.id, taskName: targetTask.name };
   }, [tasks, display.samples, layerName]);
+
+  const slices = targetLayer?.slices || [];
+  const annotations = targetLayer?.annotations || [];
+  const sliceSize = targetLayer?.sliceSize || 256;
+  const sliceRows = targetLayer?.sliceRows || 4;
+  const sliceCols = targetLayer?.sliceCols || 4;
+
+  // 统计
+  const totalSlices = slices.length;
+  const validSlices = slices.filter((s) => (s.annotationIds?.length || 0) > 0);
+  const blankSlices = slices.filter((s) => (s.annotationIds?.length || 0) === 0);
+  const sliced = totalSlices > 0;
 
   // 三级页面分页
   const [page3, setPage3] = useState(1);
-  const [pageSize3, setPageSize3] = useState(20);
+  const [pageSize3, setPageSize3] = useState(10);
   React.useEffect(() => {
     setPage3(1);
-  }, [display.id, layerName, annotations.length]);
-  const pagedAnnotations = useMemo(
-    () => annotations.slice((page3 - 1) * pageSize3, page3 * pageSize3),
-    [annotations, page3, pageSize3],
+  }, [display.id, layerName, totalSlices]);
+  const pagedSlices = useMemo(
+    () => slices.slice((page3 - 1) * pageSize3, page3 * pageSize3),
+    [slices, page3, pageSize3],
   );
 
-  // 删除单个标注
-  const handleDelete = (annotationId: string) => {
-    if (!taskId) return;
-    if (!confirm('确定删除该标注？此操作不可撤销。')) return;
+  // 删除某切片下所有标注
+  const handleDeleteSlice = (slice: SliceItem) => {
+    if (!taskId || !targetLayer) return;
+    if ((slice.annotationIds?.length || 0) === 0) return;
+    if (
+      !confirm(
+        `确定删除「${layerName}」的切片 ${slice.name} 下的 ${slice.annotationIds.length} 个标注框？`,
+      )
+    )
+      return;
     annotationTaskStore.set((prev) =>
       prev.map((t) =>
         t.id === taskId
           ? {
               ...t,
               layers: t.layers.map((l) =>
-                l.name === layerName
+                l.id === targetLayer.id
                   ? {
                       ...l,
-                      annotated: (l.annotations || []).filter(
-                        (a) => a.id !== annotationId,
-                      ).length > 0,
                       annotations: (l.annotations || []).filter(
-                        (a) => a.id !== annotationId,
+                        (a) => !slice.annotationIds.includes(a.id),
                       ),
                     }
                   : l,
@@ -960,17 +970,80 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
           : t,
       ),
     );
+    // 重新切片
+    rebuildSlicesForLayer(taskId, targetLayer.id);
+  };
+
+  // 重新执行切片（用于更新 slices 与 annotation.sliceId）
+  const rebuildSlicesForLayer = (tid: string, lid: string) => {
+    annotationTaskStore.set((prev) =>
+      prev.map((t) => {
+        if (t.id !== tid) return t;
+        return {
+          ...t,
+          layers: t.layers.map((l) => {
+            if (l.id !== lid) return l;
+            const grid = {
+              rows: l.sliceRows || 4,
+              cols: l.sliceCols || 4,
+              size: l.sliceSize || 256,
+            };
+            const cellW = 100 / grid.cols;
+            const cellH = 100 / grid.rows;
+            const newSlices: SliceItem[] = [];
+            for (let r = 0; r < grid.rows; r++) {
+              for (let c = 0; c < grid.cols; c++) {
+                newSlices.push({
+                  id: `r${r}_c${c}`,
+                  name: `r${r}_c${c}`,
+                  row: r,
+                  col: c,
+                  annotationIds: [],
+                  blank: false,
+                });
+              }
+            }
+            const idx = new Map<string, string[]>();
+            (l.annotations || []).forEach((a) => {
+              const cx = a.xPercent + a.wPercent / 2;
+              const cy = a.yPercent + a.hPercent / 2;
+              const c0 = Math.min(
+                grid.cols - 1,
+                Math.max(0, Math.floor(cx / cellW)),
+              );
+              const r0 = Math.min(
+                grid.rows - 1,
+                Math.max(0, Math.floor(cy / cellH)),
+              );
+              const sid = `r${r0}_c${c0}`;
+              a.sliceRow = r0;
+              a.sliceCol = c0;
+              a.sliceId = sid;
+              const arr = idx.get(sid) || [];
+              arr.push(a.id);
+              idx.set(sid, arr);
+            });
+            newSlices.forEach((s) => {
+              const ids = idx.get(s.id) || [];
+              s.annotationIds = ids;
+              s.blank = ids.length === 0;
+            });
+            return { ...l, slices: newSlices };
+          }),
+        };
+      }),
+    );
   };
 
   // 跳转到样本解译工作台并定位到该图层
-  const handleEdit = (annotation: AnnotationItem) => {
-    if (!taskId) {
+  const handleJumpToAnnotation = () => {
+    if (!taskId || !targetLayer) {
       alert('未找到对应的标注项目，无法跳转');
       return;
     }
     const targetTask = tasks.find((t) => t.id === taskId);
     if (!targetTask) return;
-    const layerIdx = targetTask.layers.findIndex((l) => l.name === layerName);
+    const layerIdx = targetTask.layers.findIndex((l) => l.id === targetLayer.id);
     if (layerIdx < 0) {
       alert('未找到对应图层，无法跳转');
       return;
@@ -992,27 +1065,52 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
         <span className="text-sm font-semibold text-gray-800">
           {display.name} / {layerName}
         </span>
-        {taskName && (
-          <span className="text-xs text-gray-400 ml-auto">
-            来源标注项目：{taskName}
-          </span>
-        )}
       </div>
 
-      {/* 该图层下的标注信息列表 */}
-      <div className="p-4">
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <div className="text-sm font-medium text-gray-700">
-              该图层下的标注信息
+      {/* 概览统计 */}
+      <div className="p-4 pb-2">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-sm font-medium text-gray-700 mb-3">切片概览</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="bg-blue-50 border border-blue-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">切片尺寸</div>
+              <div className="text-sm font-semibold text-blue-700">
+                {sliceSize} × {sliceSize}
+              </div>
             </div>
-            <div className="text-xs text-gray-500">
-              共 {annotations.length} 条
+            <div className="bg-purple-50 border border-purple-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">切片网格</div>
+              <div className="text-sm font-semibold text-purple-700">
+                {sliceRows} × {sliceCols} = {totalSlices}
+              </div>
+            </div>
+            <div className="bg-green-50 border border-green-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">有效切片</div>
+              <div className="text-sm font-semibold text-green-700">
+                {validSlices.length}
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">标注框总数</div>
+              <div className="text-sm font-semibold text-amber-700">
+                {annotations.length}
+              </div>
             </div>
           </div>
-          {annotations.length === 0 ? (
+        </div>
+      </div>
+
+      {/* 切片列表 */}
+      <div className="p-4">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <div className="text-sm font-medium text-gray-700">
+              该图层下的切片信息
+            </div>
+          </div>
+          {!sliced ? (
             <div className="text-xs text-gray-400 py-12 text-center">
-              该图层下暂无标注信息
+              该图层尚未执行切片，请到「样本解译」工作台执行切片
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -1022,110 +1120,203 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                     #
                   </th>
                   <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs w-20 whitespace-nowrap">
-                    缩略图
+                    切片缩略图
                   </th>
                   <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs whitespace-nowrap">
-                    标注名称
+                    切片名称
                   </th>
                   <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs whitespace-nowrap">
-                    标签
+                    内含标注框
                   </th>
-                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
-                    X 位置
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap w-24">
+                    状态
                   </th>
-                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
-                    Y 位置
-                  </th>
-                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
-                    宽度
-                  </th>
-                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap">
-                    高度
-                  </th>
-                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap w-32">
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs whitespace-nowrap w-48">
                     操作
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {pagedAnnotations.map((a, idx) => (
-                  <tr
-                    key={a.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
-                    <td className="py-2.5 px-4 text-gray-400 text-xs whitespace-nowrap">
-                      {(page3 - 1) * pageSize3 + idx + 1}
-                    </td>
-                    <td className="py-2.5 px-4 whitespace-nowrap">
-                      <button
-                        onClick={() => setPreviewing(a)}
-                        title="点击放大查看"
-                        className="w-12 h-9 rounded border border-gray-200 hover:border-blue-500 transition-colors flex items-center justify-center relative overflow-hidden"
-                        style={{ backgroundColor: `${a.color}22` }}
-                      >
-                        <div
-                          className="absolute border"
-                          style={{
-                            left: `${a.xPercent}%`,
-                            top: `${a.yPercent}%`,
-                            width: `${a.wPercent}%`,
-                            height: `${a.hPercent}%`,
-                            borderColor: a.color,
-                            backgroundColor: `${a.color}55`,
-                          }}
-                        />
-                      </button>
-                    </td>
-                    <td className="py-2.5 px-4 text-gray-700 text-xs whitespace-nowrap font-medium">
-                      {a.displayName}
-                    </td>
-                    <td className="py-2.5 px-4 text-gray-700 text-xs whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span
-                          className="w-3 h-3 rounded-sm flex-shrink-0"
-                          style={{ backgroundColor: a.color }}
-                        />
-                        <span>{a.labelName}</span>
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
-                      {a.xPercent.toFixed(2)}%
-                    </td>
-                    <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
-                      {a.yPercent.toFixed(2)}%
-                    </td>
-                    <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
-                      {a.wPercent.toFixed(2)}%
-                    </td>
-                    <td className="py-2.5 px-4 text-center text-gray-700 text-xs whitespace-nowrap">
-                      {a.hPercent.toFixed(2)}%
-                    </td>
-                    <td className="py-2.5 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-3 text-xs">
-                        <button
-                          onClick={() => handleEdit(a)}
-                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1 whitespace-nowrap"
-                          title="跳转到样本解译工作台该图层"
-                        >
-                          <Edit2 size={12} /> 编辑
-                        </button>
-                        <button
-                          onClick={() => handleDelete(a.id)}
-                          className="text-red-500 hover:text-red-700 flex items-center gap-1 whitespace-nowrap"
-                          title="删除该标注"
-                        >
-                          <Trash2 size={12} /> 删除
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {pagedSlices.map((s, idx) => {
+                  const anns =
+                    (s.annotationIds || [])
+                      .map((id) =>
+                        annotations.find((a) => a.id === id) || null,
+                      )
+                      .filter(Boolean) as AnnotationItem[];
+                  const expanded = expandedSliceId === s.id;
+                  return (
+                    <React.Fragment key={s.id}>
+                      <tr className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-2.5 px-4 text-gray-400 text-xs whitespace-nowrap">
+                          {(page3 - 1) * pageSize3 + idx + 1}
+                        </td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <button
+                            onClick={() => setPreviewing(s)}
+                            title="点击放大查看"
+                            className="w-12 h-12 rounded border border-gray-200 hover:border-blue-500 transition-colors flex items-center justify-center relative overflow-hidden bg-white"
+                          >
+                            {/* 切片缩略图：单元格高亮 + 内含标注框示意 */}
+                            <div className="absolute inset-0 grid"
+                              style={{
+                                gridTemplateColumns: `repeat(${sliceCols}, 1fr)`,
+                                gridTemplateRows: `repeat(${sliceRows}, 1fr)`,
+                              }}
+                            >
+                              {Array.from({ length: sliceRows * sliceCols }).map((_, i) => {
+                                const r = Math.floor(i / sliceCols);
+                                const c = i % sliceCols;
+                                const isMe = r === s.row && c === s.col;
+                                return (
+                                  <div
+                                    key={i}
+                                    className={isMe ? 'bg-blue-100' : 'bg-gray-50'}
+                                  />
+                                );
+                              })}
+                            </div>
+                            {anns.slice(0, 3).map((a) => (
+                              <div
+                                key={a.id}
+                                className="absolute border"
+                                style={{
+                                  left: `${((a.xPercent - s.col * (100 / sliceCols)) * sliceCols) / 100 * 100}%`,
+                                  top: `${((a.yPercent - s.row * (100 / sliceRows)) * sliceRows) / 100 * 100}%`,
+                                  width: `${(a.wPercent * sliceCols) / 100}%`,
+                                  height: `${(a.hPercent * sliceRows) / 100}%`,
+                                  borderColor: a.color,
+                                  backgroundColor: `${a.color}55`,
+                                }}
+                              />
+                            ))}
+                            {anns.length > 3 && (
+                              <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] px-1 rounded">
+                                +{anns.length - 3}
+                              </div>
+                            )}
+                          </button>
+                        </td>
+                        <td className="py-2.5 px-4 text-gray-700 text-xs whitespace-nowrap font-medium">
+                          {s.name}
+                        </td>
+                        <td className="py-2.5 px-4 text-gray-700 text-xs">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {anns.length === 0 && (
+                              <span className="text-gray-400">—</span>
+                            )}
+                            {anns.slice(0, 4).map((a) => (
+                              <span
+                                key={a.id}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200"
+                                style={{ color: a.color }}
+                                title={`${a.displayName} · ${a.labelName}`}
+                              >
+                                <span
+                                  className="w-2 h-2 rounded-sm flex-shrink-0"
+                                  style={{ backgroundColor: a.color }}
+                                />
+                                <span className="text-gray-700">{a.displayName}</span>
+                              </span>
+                            ))}
+                            {anns.length > 4 && (
+                              <button
+                                onClick={() =>
+                                  setExpandedSliceId(expanded ? null : s.id)
+                                }
+                                className="text-blue-600 hover:text-blue-800 text-[11px]"
+                              >
+                                {expanded ? '收起' : `展开 +${anns.length - 4}`}
+                              </button>
+                            )}
+                            {anns.length > 0 && anns.length <= 4 && (
+                              <button
+                                onClick={() =>
+                                  setExpandedSliceId(expanded ? null : s.id)
+                                }
+                                className="text-blue-600 hover:text-blue-800 text-[11px]"
+                              >
+                                {expanded ? '收起' : '详情'}
+                              </button>
+                            )}
+                          </div>
+                          {expanded && (
+                            <div className="mt-2 grid grid-cols-2 gap-2 max-w-2xl">
+                              {anns.map((a) => (
+                                <div
+                                  key={a.id}
+                                  className="border border-gray-200 rounded p-2 bg-gray-50"
+                                >
+                                  <div className="flex items-center gap-1.5 text-[11px]">
+                                    <span
+                                      className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                                      style={{ backgroundColor: a.color }}
+                                    />
+                                    <span className="font-medium text-gray-800">
+                                      {a.displayName}
+                                    </span>
+                                    <span className="text-gray-400">·</span>
+                                    <span className="text-gray-600">{a.labelName}</span>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-1 mt-1 text-[10px] text-gray-500">
+                                    <span>X: {a.xPercent.toFixed(1)}%</span>
+                                    <span>Y: {a.yPercent.toFixed(1)}%</span>
+                                    <span>W: {a.wPercent.toFixed(1)}%</span>
+                                    <span>H: {a.hPercent.toFixed(1)}%</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                          {anns.length === 0 ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                              纯色
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                              <Check size={11} /> {anns.length} 个目标
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-3 text-xs">
+                            <button
+                              onClick={handleJumpToAnnotation}
+                              className="text-blue-600 hover:text-blue-800 flex items-center gap-1 whitespace-nowrap"
+                              title="跳转到样本解译工作台该图层"
+                            >
+                              <Edit2 size={12} /> 定位
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSlice(s)}
+                              disabled={anns.length === 0}
+                              className={`flex items-center gap-1 whitespace-nowrap ${
+                                anns.length === 0
+                                  ? 'text-gray-300 cursor-not-allowed'
+                                  : 'text-red-500 hover:text-red-700'
+                              }`}
+                              title={
+                                anns.length === 0
+                                  ? '该切片无可删标注'
+                                  : '删除该切片下的所有标注'
+                              }
+                            >
+                              <Trash2 size={12} /> 删除切片
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           )}
-          {annotations.length > 0 && (
+          {sliced && (
             <Pagination
-              total={annotations.length}
+              total={totalSlices}
               page={page3}
               pageSize={pageSize3}
               onPageChange={setPage3}
@@ -1138,24 +1329,20 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 缩略图放大查看弹窗 */}
-      {previewing && (
+      {/* 切片放大查看弹窗 */}
+      {previewing && targetLayer && (
         <div
           className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
           onClick={() => setPreviewing(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-2xl w-[720px] max-w-full overflow-hidden"
+            className="bg-white rounded-lg shadow-2xl w-[820px] max-w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
               <div className="text-sm font-medium text-gray-800 flex items-center gap-2">
-                <span
-                  className="w-3 h-3 rounded-sm flex-shrink-0"
-                  style={{ backgroundColor: previewing.color }}
-                />
-                <span>{previewing.displayName}</span>
-                <span className="text-gray-400 text-xs">· {previewing.labelName}</span>
+                <span>切片 {previewing.name}</span>
+                <span className="text-gray-400 text-xs">· {layerName}</span>
               </div>
               <button
                 onClick={() => setPreviewing(null)}
@@ -1167,7 +1354,7 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
             <div className="p-5 bg-gray-50">
               <div
                 className="w-full relative bg-white border border-gray-200 rounded overflow-hidden"
-                style={{ aspectRatio: '16 / 9' }}
+                style={{ aspectRatio: '1 / 1' }}
               >
                 {/* 模拟图层背景网格 */}
                 <div
@@ -1177,28 +1364,43 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                       'repeating-linear-gradient(0deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 40px), repeating-linear-gradient(90deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 40px)',
                   }}
                 />
-                {/* 标注框 */}
+                {/* 切片高亮区域（该 slice 范围） */}
                 <div
-                  className="absolute border-2"
+                  className="absolute bg-blue-100/40 border-2 border-blue-500"
                   style={{
-                    left: `${previewing.xPercent}%`,
-                    top: `${previewing.yPercent}%`,
-                    width: `${previewing.wPercent}%`,
-                    height: `${previewing.hPercent}%`,
-                    borderColor: previewing.color,
-                    backgroundColor: `${previewing.color}22`,
+                    left: `${(previewing.col * 100) / sliceCols}%`,
+                    top: `${(previewing.row * 100) / sliceRows}%`,
+                    width: `${100 / sliceCols}%`,
+                    height: `${100 / sliceRows}%`,
                   }}
-                >
+                />
+                {/* 所有标注框 */}
+                {annotations.map((a) => (
                   <div
-                    className="absolute -top-6 left-0 text-xs font-medium whitespace-nowrap px-1.5 py-0.5 rounded text-white"
-                    style={{ backgroundColor: previewing.color }}
+                    key={a.id}
+                    className="absolute border-2"
+                    style={{
+                      left: `${a.xPercent}%`,
+                      top: `${a.yPercent}%`,
+                      width: `${a.wPercent}%`,
+                      height: `${a.hPercent}%`,
+                      borderColor: a.color,
+                      backgroundColor: `${a.color}22`,
+                    }}
                   >
-                    {previewing.displayName}
+                    <div
+                      className="absolute -top-6 left-0 text-[10px] font-medium whitespace-nowrap px-1.5 py-0.5 rounded text-white"
+                      style={{ backgroundColor: a.color }}
+                    >
+                      {a.displayName}
+                    </div>
                   </div>
-                </div>
-                {/* 图层名 */}
+                ))}
                 <div className="absolute top-3 left-3 bg-white/90 px-2.5 py-1 rounded border border-gray-200 text-xs text-gray-600">
                   {layerName}
+                </div>
+                <div className="absolute bottom-3 right-3 bg-white/90 px-2.5 py-1 rounded border border-gray-200 text-xs text-gray-600">
+                  切片 {previewing.name}（{previewing.annotationIds.length} 个标注）
                 </div>
               </div>
             </div>
@@ -1243,30 +1445,8 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   const [manualDialog, setManualDialog] = useState(false);
   const [selTaskId, setSelTaskId] = useState<string>(tasks[0]?.id || '');
   const [selLayer, setSelLayer] = useState<string>('');
-  const [selLabelId, setSelLabelId] = useState<string>('');
 
   const currentTask = tasks.find((t) => t.id === selTaskId) || null;
-
-  const taskLabels = React.useMemo(() => {
-    if (!currentTask) return [];
-    const collected = new Map<
-      string,
-      { id: string; name: string; color: string }
-    >();
-    for (const layer of currentTask.layers) {
-      const anns = layer.annotations || [];
-      for (const a of anns) {
-        if (!collected.has(a.labelId)) {
-          collected.set(a.labelId, {
-            id: a.labelId,
-            name: a.labelName,
-            color: a.color,
-          });
-        }
-      }
-    }
-    return Array.from(collected.values());
-  }, [currentTask]);
 
   React.useEffect(() => {
     if (currentTask && currentTask.layers.length > 0) {
@@ -1274,12 +1454,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     } else {
       setSelLayer('');
     }
-    if (taskLabels.length > 0) {
-      setSelLabelId(taskLabels[0].id);
-    } else {
-      setSelLabelId('');
-    }
-  }, [selTaskId, taskLabels]);
+  }, [selTaskId]);
 
   const confirm = () => {
     if (!name.trim()) {
@@ -1295,24 +1470,43 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
   };
 
   const addManual = () => {
-    if (!currentTask || !selLayer || !selLabelId) {
-      alert('请先选择数据集和标签');
+    if (!currentTask || !selLayer) {
+      alert('请先选择数据集和图层');
       return;
     }
     const layer = currentTask.layers.find((l) => l.id === selLayer);
-    const label = taskLabels.find((l) => l.id === selLabelId);
-    if (!layer || !label) return;
-    setSamplesDraft([
-      {
+    if (!layer) return;
+    const annotations = layer.annotations || [];
+    if (annotations.length === 0) {
+      alert('该图层下暂无标注信息');
+      return;
+    }
+    // 避免重复添加同一图层
+    const existedKeys = new Set(
+      samplesDraft.map(
+        (s) => `${s.fromTask}::${s.fromLayer}::${s.name}`,
+      ),
+    );
+    const newSamples: SampleItem[] = [];
+    for (const a of annotations) {
+      const name = a.displayName || a.labelName;
+      const key = `${currentTask.name}::${layer.name}::${name}`;
+      if (existedKeys.has(key)) continue;
+      existedKeys.add(key);
+      newSamples.push({
         id: genId(),
-        name: `${label.name}切片`,
+        name,
         fromTask: currentTask.name,
         fromLayer: layer.name,
-        fromLabel: label.name,
+        fromLabel: a.labelName,
         extractedAt: nowStr(),
-      },
-      ...samplesDraft,
-    ]);
+      });
+    }
+    if (newSamples.length === 0) {
+      alert('该图层下的标注信息已全部添加');
+      return;
+    }
+    setSamplesDraft([...newSamples, ...samplesDraft]);
     setManualDialog(false);
   };
 
@@ -1432,7 +1626,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
           <div className="bg-white rounded-lg shadow-xl w-[460px]">
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
               <h3 className="text-sm font-medium text-gray-800">
-                按数据集-图层-标签路径新增
+                按数据集-图层路径新增
               </h3>
               <button onClick={() => setManualDialog(false)} className="text-gray-400 hover:text-gray-600">
                 <span className="text-sm">✕</span>
@@ -1483,27 +1677,8 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
                   </div>
                 )}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  标签
-                </label>
-                {taskLabels.length > 0 ? (
-                  <select
-                    value={selLabelId}
-                    onChange={(e) => setSelLabelId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {taskLabels.map((lb) => (
-                      <option key={lb.id} value={lb.id}>
-                        {lb.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="text-xs text-gray-400 border border-gray-200 rounded px-3 py-2">
-                    该项目暂无标注框
-                  </div>
-                )}
+              <div className="text-[11px] text-gray-400 bg-gray-50 border border-gray-200 rounded px-3 py-2">
+                点击添加后，会将该图层下的所有标注信息一次性添加到样本集。
               </div>
             </div>
             <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200">
