@@ -1293,7 +1293,7 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                               className="text-blue-600 hover:text-blue-800 flex items-center gap-1 whitespace-nowrap"
                               title="跳转到样本解译工作台该图层"
                             >
-                              <Edit2 size={12} /> 定位
+                              <Edit2 size={12} /> 编辑
                             </button>
                             <button
                               onClick={() => handleDeleteSlice(s)}
