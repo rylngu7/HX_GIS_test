@@ -56,13 +56,14 @@ const countAnnotationsForCategory = (category: SampleCategory, tasks: Annotation
 const buildLayerStats = (category: SampleCategory, tasks: AnnotationTask[]) => {
   const layerMap = new Map<
     string,
-    { slices: number; annotated: number; taskName: string }
+    { slices: number; annotated: number; taskName: string; slicedAt: string }
   >();
   for (const s of category.samples) {
     const existing = layerMap.get(s.fromLayer) || {
       slices: 0,
       annotated: 0,
       taskName: s.fromTask,
+      slicedAt: '',
     };
     existing.slices += 1;
     layerMap.set(s.fromLayer, existing);
@@ -73,6 +74,9 @@ const buildLayerStats = (category: SampleCategory, tasks: AnnotationTask[]) => {
       const existing = layerMap.get(key);
       if (existing) {
         existing.annotated = (layer.annotations || []).length;
+        if (layer.slicedAt && (!existing.slicedAt || layer.slicedAt > existing.slicedAt)) {
+          existing.slicedAt = layer.slicedAt;
+        }
       }
     }
   }
@@ -762,7 +766,7 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
       <div className="px-4 pb-4 pt-2">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-700">
-            图层切片情况
+            图层信息
           </div>
           {layerStats.length === 0 ? (
             <div className="text-xs text-gray-400 py-8 text-center">
@@ -789,6 +793,9 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                   </th>
                   <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs w-24">
                     切片状态
+                  </th>
+                  <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs w-40">
+                    最新切片时间
                   </th>
                   <th className="py-2.5 px-4 text-center font-medium text-gray-600 text-xs w-24">
                     操作
@@ -834,6 +841,9 @@ const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                             未切片
                           </span>
                         )}
+                      </td>
+                      <td className="py-2.5 px-4 text-center text-gray-600 text-[11px] whitespace-nowrap">
+                        {ls.slicedAt || '-'}
                       </td>
                       <td className="py-2.5 px-4 text-center whitespace-nowrap">
                         <button
@@ -1071,7 +1081,7 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
       <div className="p-4 pb-2">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="text-sm font-medium text-gray-700 mb-3">图层概览</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             <div className="bg-blue-50 border border-blue-100 rounded p-2.5 text-center">
               <div className="text-[11px] text-gray-500 mb-1">切片数</div>
               <div className="text-sm font-semibold text-blue-700">{totalSlices}</div>
@@ -1100,12 +1110,6 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
               <div className="text-[11px] text-gray-500 mb-1">切片尺寸</div>
               <div className="text-sm font-semibold text-purple-700">
                 {sliceSize} × {sliceSize}
-              </div>
-            </div>
-            <div className="bg-sky-50 border border-sky-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">最新切片时间</div>
-              <div className="text-[11px] font-semibold text-sky-700">
-                {targetLayer?.slicedAt || '-'}
               </div>
             </div>
           </div>
