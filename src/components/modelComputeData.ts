@@ -75,6 +75,7 @@ export interface LayerInTask {
   sliceSize?: number;             // 切片边长（默认 256）
   sliceRows?: number;             // 网格行数
   sliceCols?: number;             // 网格列数
+  slicedAt?: string;               // 最新切片时间
 }
 
 export interface AnnotationTask {
@@ -642,6 +643,7 @@ const sliceLayer = (layer: LayerInTask, grid = DEFAULT_SLICE_GRID) => {
   layer.sliceSize = grid.size;
   layer.sliceRows = grid.rows;
   layer.sliceCols = grid.cols;
+  layer.slicedAt = nowStr();
 };
 
 const buildLayerFromFiles = (fileNames: string[], annotatedFlags: boolean[]) =>

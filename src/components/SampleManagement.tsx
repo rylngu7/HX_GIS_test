@@ -1067,33 +1067,45 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
         </span>
       </div>
 
-      {/* 概览统计 */}
+      {/* 图层概览 */}
       <div className="p-4 pb-2">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm font-medium text-gray-700 mb-3">切片概览</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="text-sm font-medium text-gray-700 mb-3">图层概览</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             <div className="bg-blue-50 border border-blue-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">切片尺寸</div>
-              <div className="text-sm font-semibold text-blue-700">
-                {sliceSize} × {sliceSize}
+              <div className="text-[11px] text-gray-500 mb-1">切片数</div>
+              <div className="text-sm font-semibold text-blue-700">{totalSlices}</div>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">正负样本数</div>
+              <div className="text-sm font-semibold text-gray-700">
+                {validSlices.length} / {blankSlices.length}
               </div>
             </div>
-            <div className="bg-purple-50 border border-purple-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">切片网格</div>
-              <div className="text-sm font-semibold text-purple-700">
-                {sliceRows} × {sliceCols} = {totalSlices}
-              </div>
-            </div>
-            <div className="bg-green-50 border border-green-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">有效切片</div>
-              <div className="text-sm font-semibold text-green-700">
-                {validSlices.length}
+            <div className="bg-emerald-50 border border-emerald-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">正样本比例</div>
+              <div className="text-sm font-semibold text-emerald-700">
+                {totalSlices === 0
+                  ? '-'
+                  : ((validSlices.length / totalSlices) * 100).toFixed(1) + '%'}
               </div>
             </div>
             <div className="bg-amber-50 border border-amber-100 rounded p-2.5 text-center">
-              <div className="text-[11px] text-gray-500 mb-1">标注框总数</div>
+              <div className="text-[11px] text-gray-500 mb-1">标注数</div>
               <div className="text-sm font-semibold text-amber-700">
                 {annotations.length}
+              </div>
+            </div>
+            <div className="bg-purple-50 border border-purple-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">切片尺寸</div>
+              <div className="text-sm font-semibold text-purple-700">
+                {sliceSize} × {sliceSize}
+              </div>
+            </div>
+            <div className="bg-sky-50 border border-sky-100 rounded p-2.5 text-center">
+              <div className="text-[11px] text-gray-500 mb-1">最新切片时间</div>
+              <div className="text-[11px] font-semibold text-sky-700">
+                {targetLayer?.slicedAt || '-'}
               </div>
             </div>
           </div>
@@ -1104,9 +1116,7 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
       <div className="p-4">
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
-            <div className="text-sm font-medium text-gray-700">
-              该图层下的切片信息
-            </div>
+            <div className="text-sm font-medium text-gray-700">切片信息</div>
           </div>
           {!sliced ? (
             <div className="text-xs text-gray-400 py-12 text-center">
@@ -1117,7 +1127,7 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
               <thead className="bg-gray-50">
                 <tr>
                   <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs w-12 whitespace-nowrap">
-                    #
+                    序号
                   </th>
                   <th className="py-2.5 px-4 text-left font-medium text-gray-600 text-xs w-20 whitespace-nowrap">
                     切片缩略图
@@ -1155,45 +1165,37 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                           <button
                             onClick={() => setPreviewing(s)}
                             title="点击放大查看"
-                            className="w-12 h-12 rounded border border-gray-200 hover:border-blue-500 transition-colors flex items-center justify-center relative overflow-hidden bg-white"
+                            className="w-12 h-12 rounded border border-gray-200 hover:border-blue-500 transition-colors flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100"
                           >
-                            {/* 切片缩略图：单元格高亮 + 内含标注框示意 */}
-                            <div className="absolute inset-0 grid"
-                              style={{
-                                gridTemplateColumns: `repeat(${sliceCols}, 1fr)`,
-                                gridTemplateRows: `repeat(${sliceRows}, 1fr)`,
-                              }}
-                            >
-                              {Array.from({ length: sliceRows * sliceCols }).map((_, i) => {
-                                const r = Math.floor(i / sliceCols);
-                                const c = i % sliceCols;
-                                const isMe = r === s.row && c === s.col;
+                            {anns.length === 0 ? (
+                              <span className="text-[9px] text-gray-400">纯色</span>
+                            ) : (
+                              anns.slice(0, 5).map((a) => {
+                                const cellW = 100 / sliceCols;
+                                const cellH = 100 / sliceRows;
+                                let relX = (a.xPercent - s.col * cellW) * sliceCols;
+                                let relY = (a.yPercent - s.row * cellH) * sliceRows;
+                                let relW = a.wPercent * sliceCols;
+                                let relH = a.hPercent * sliceRows;
+                                relX = Math.max(0, Math.min(100, relX));
+                                relY = Math.max(0, Math.min(100, relY));
+                                relW = Math.max(2, Math.min(100 - relX, relW));
+                                relH = Math.max(2, Math.min(100 - relY, relH));
                                 return (
                                   <div
-                                    key={i}
-                                    className={isMe ? 'bg-blue-100' : 'bg-gray-50'}
+                                    key={a.id}
+                                    className="absolute border"
+                                    style={{
+                                      left: `${relX}%`,
+                                      top: `${relY}%`,
+                                      width: `${relW}%`,
+                                      height: `${relH}%`,
+                                      borderColor: a.color,
+                                      backgroundColor: `${a.color}55`,
+                                    }}
                                   />
                                 );
-                              })}
-                            </div>
-                            {anns.slice(0, 3).map((a) => (
-                              <div
-                                key={a.id}
-                                className="absolute border"
-                                style={{
-                                  left: `${((a.xPercent - s.col * (100 / sliceCols)) * sliceCols) / 100 * 100}%`,
-                                  top: `${((a.yPercent - s.row * (100 / sliceRows)) * sliceRows) / 100 * 100}%`,
-                                  width: `${(a.wPercent * sliceCols) / 100}%`,
-                                  height: `${(a.hPercent * sliceRows) / 100}%`,
-                                  borderColor: a.color,
-                                  backgroundColor: `${a.color}55`,
-                                }}
-                              />
-                            ))}
-                            {anns.length > 3 && (
-                              <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[9px] px-1 rounded">
-                                +{anns.length - 3}
-                              </div>
+                              })
                             )}
                           </button>
                         </td>
@@ -1356,51 +1358,58 @@ const LayerDetailView: React.FC<LayerDetailViewProps> = ({
                 className="w-full relative bg-white border border-gray-200 rounded overflow-hidden"
                 style={{ aspectRatio: '1 / 1' }}
               >
-                {/* 模拟图层背景网格 */}
+                {/* 模拟切片背景（256×256 子图） */}
                 <div
-                  className="absolute inset-0 opacity-30 pointer-events-none"
+                  className="absolute inset-0 opacity-40 pointer-events-none"
                   style={{
                     backgroundImage:
-                      'repeating-linear-gradient(0deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 40px), repeating-linear-gradient(90deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 40px)',
+                      'repeating-linear-gradient(0deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 32px), repeating-linear-gradient(90deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 32px)',
                   }}
                 />
-                {/* 切片高亮区域（该 slice 范围） */}
-                <div
-                  className="absolute bg-blue-100/40 border-2 border-blue-500"
-                  style={{
-                    left: `${(previewing.col * 100) / sliceCols}%`,
-                    top: `${(previewing.row * 100) / sliceRows}%`,
-                    width: `${100 / sliceCols}%`,
-                    height: `${100 / sliceRows}%`,
-                  }}
-                />
-                {/* 所有标注框 */}
-                {annotations.map((a) => (
-                  <div
-                    key={a.id}
-                    className="absolute border-2"
-                    style={{
-                      left: `${a.xPercent}%`,
-                      top: `${a.yPercent}%`,
-                      width: `${a.wPercent}%`,
-                      height: `${a.hPercent}%`,
-                      borderColor: a.color,
-                      backgroundColor: `${a.color}22`,
-                    }}
-                  >
-                    <div
-                      className="absolute -top-6 left-0 text-[10px] font-medium whitespace-nowrap px-1.5 py-0.5 rounded text-white"
-                      style={{ backgroundColor: a.color }}
-                    >
-                      {a.displayName}
-                    </div>
-                  </div>
-                ))}
+                {/* 仅展示该切片下的标注框（切片相对坐标） */}
+                {(() => {
+                  const sliceAnns = (previewing.annotationIds || [])
+                    .map((id) => annotations.find((a) => a.id === id))
+                    .filter(Boolean) as AnnotationItem[];
+                  const cellW = 100 / sliceCols;
+                  const cellH = 100 / sliceRows;
+                  return sliceAnns.map((a) => {
+                    let relX = (a.xPercent - previewing.col * cellW) * sliceCols;
+                    let relY = (a.yPercent - previewing.row * cellH) * sliceRows;
+                    let relW = a.wPercent * sliceCols;
+                    let relH = a.hPercent * sliceRows;
+                    relX = Math.max(0, Math.min(100, relX));
+                    relY = Math.max(0, Math.min(100, relY));
+                    relW = Math.max(1, Math.min(100 - relX, relW));
+                    relH = Math.max(1, Math.min(100 - relY, relH));
+                    return (
+                      <div
+                        key={a.id}
+                        className="absolute border-2"
+                        style={{
+                          left: `${relX}%`,
+                          top: `${relY}%`,
+                          width: `${relW}%`,
+                          height: `${relH}%`,
+                          borderColor: a.color,
+                          backgroundColor: `${a.color}33`,
+                        }}
+                      >
+                        <div
+                          className="absolute -top-6 left-0 text-[11px] font-medium whitespace-nowrap px-1.5 py-0.5 rounded text-white"
+                          style={{ backgroundColor: a.color }}
+                        >
+                          {a.displayName}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
                 <div className="absolute top-3 left-3 bg-white/90 px-2.5 py-1 rounded border border-gray-200 text-xs text-gray-600">
-                  {layerName}
+                  {layerName} · 切片 {previewing.name}
                 </div>
                 <div className="absolute bottom-3 right-3 bg-white/90 px-2.5 py-1 rounded border border-gray-200 text-xs text-gray-600">
-                  切片 {previewing.name}（{previewing.annotationIds.length} 个标注）
+                  {sliceSize} × {sliceSize} · {previewing.annotationIds.length} 个标注
                 </div>
               </div>
             </div>
