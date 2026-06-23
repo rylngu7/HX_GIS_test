@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import MapView from '../components/MapView';
@@ -8,7 +8,7 @@ import ModelCompute from '../components/ModelCompute';
 import { useTaskManager, useTaskSimulation } from '../components/TaskList';
 import ExportModal from '../components/ExportModal';
 import UploadFileModal from '../components/UploadFileModal';
-import { Clock, Briefcase } from 'lucide-react';
+import { Clock, Briefcase, AlertCircle, X } from 'lucide-react';
 
 export default function Home() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -21,7 +21,16 @@ export default function Home() {
   const [toolboxOpen, setToolboxOpen] = useState(false);
   const [activeNav, setActiveNav] = useState('数据管理');
 
-  const { tasks, addTask, updateTaskProgress, updateTaskStatus, closeTask, clearCompleted } = useTaskManager();
+  // 上传进行中状态
+  const [isUploading, setIsUploading] = useState(false);
+  // 离开数据目录页面确认弹窗
+  const [showNavLeaveConfirm, setShowNavLeaveConfirm] = useState(false);
+  const [pendingNav, setPendingNav] = useState<string | null>(null);
+  // 删除任务确认弹窗
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState<string | null>(null);
+
+  const { tasks, addTask, updateTaskProgress, updateTaskStatus, closeTask, clearCompleted, markSavedToDirectory } = useTaskManager();
   const { startTask } = useTaskSimulation(addTask, updateTaskProgress);
 
   const formatFileSize = (bytes: number): string => {
@@ -31,7 +40,13 @@ export default function Home() {
   };
 
   // Track the latest upload task id so simulation updates can target the same task
-  const latestUploadTaskIdRef = React.useRef<string | null>(null);
+  const latestUploadTaskIdRef = useRef<string | null>(null);
+  // Ref to trigger upload cancellation from the modal (used when leaving the page)
+  const cancelUploadRef = useRef<(() => void) | null>(null);
+
+  const setUploadCancelRef = useCallback((ref: { cancel: () => void } | null) => {
+    cancelUploadRef.current = ref ? ref.cancel : null;
+  }, []);
 
   const handleUploadFile = (payload: { file: File; dataType: string; dataName: string; description: string; checkProjection: boolean; targetDirectory?: string; _stageSuccess?: boolean; _stageFailure?: string; _stageKey?: string }) => {
     // Case 1: stage failure callback from UploadFileModal -> mark the task as failed
@@ -48,10 +63,34 @@ export default function Home() {
     }
     // Case 3: initial create-task call
     const fileSize = formatFileSize(payload.file.size);
-    const taskId = addTask(`上传: ${payload.dataName}`, fileSize, payload.dataType, payload.dataName);
+    const taskId = addTask(`上传: ${payload.dataName}`, fileSize, payload.dataType, payload.dataName, 'upload');
     latestUploadTaskIdRef.current = taskId;
     setTaskCenterOpen(true);
   };
+
+  // 上传进度回调
+  const handleUploadProgress = (progress: number, stageText?: string) => {
+    if (latestUploadTaskIdRef.current) {
+      updateTaskProgress(latestUploadTaskIdRef.current, progress, { stageText });
+    }
+  };
+
+  // 上传状态变化回调
+  const handleUploadingChange = useCallback((uploading: boolean) => {
+    setIsUploading(uploading);
+  }, []);
+
+  // 父组件提供的中断上传方法（供模态框内部使用，触发人为中断失败）
+  const handleCancelUpload = useCallback(() => {
+    if (latestUploadTaskIdRef.current) {
+      updateTaskStatus(
+        latestUploadTaskIdRef.current,
+        'failed',
+        '人为中断：用户在中途选择离开'
+      );
+      latestUploadTaskIdRef.current = null;
+    }
+  }, [updateTaskStatus]);
 
   const handleExecute = (toolName: string, params?: any) => {
     if (toolName === '视频融合' && params) {
@@ -60,7 +99,7 @@ export default function Home() {
     }
     if (params?.success === false) {
       // 处理失败任务
-      const taskId = addTask(toolName);
+      const taskId = addTask(toolName, undefined, undefined, undefined, 'toolbox');
       updateTaskStatus(taskId, 'failed', params.error);
       setTaskCenterOpen(true);
     } else {
@@ -89,6 +128,79 @@ export default function Home() {
 
   const handleToggleToolbox = () => {
     setToolboxOpen(!toolboxOpen);
+  };
+
+  // 导航切换处理：若正在上传则先弹出确认
+  const handleNavChange = (nav: string) => {
+    if (activeNav === '数据管理' && nav !== '数据管理' && isUploading) {
+      setPendingNav(nav);
+      setShowNavLeaveConfirm(true);
+      return;
+    }
+    setActiveNav(nav);
+  };
+
+  // 确认离开数据目录：中断上传并切换导航
+  const confirmNavLeave = () => {
+    // 1) 标记任务为失败
+    if (latestUploadTaskIdRef.current) {
+      updateTaskStatus(
+        latestUploadTaskIdRef.current,
+        'failed',
+        '人为中断：用户在中途选择离开'
+      );
+      latestUploadTaskIdRef.current = null;
+    }
+    // 2) 主动停止上传模拟（清理 tickRef 并关闭弹窗）
+    if (cancelUploadRef.current) {
+      cancelUploadRef.current();
+    } else {
+      setUploadModalOpen(false);
+    }
+    setShowNavLeaveConfirm(false);
+    const nextNav = pendingNav;
+    setPendingNav(null);
+    if (nextNav) setActiveNav(nextNav);
+  };
+  const cancelNavLeave = () => {
+    setShowNavLeaveConfirm(false);
+    setPendingNav(null);
+  };
+
+  // 任务删除处理：工具箱未另存的任务需要二次确认
+  const handleDeleteTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    // 上传文件的任务：自动存储到数据目录，删除不加提示
+    if (task.source === 'upload') {
+      closeTask(taskId);
+      return;
+    }
+    // 工具箱任务：未另存到目录的删除需确认
+    if (task.source === 'toolbox') {
+      if (task.savedToDirectory) {
+        closeTask(taskId);
+      } else {
+        setPendingDeleteTaskId(taskId);
+        setShowDeleteConfirm(true);
+      }
+      return;
+    }
+    // 兜底：直接删除
+    closeTask(taskId);
+  };
+
+  const confirmDeleteTask = () => {
+    if (pendingDeleteTaskId) {
+      closeTask(pendingDeleteTaskId);
+    }
+    setShowDeleteConfirm(false);
+    setPendingDeleteTaskId(null);
+  };
+
+  const cancelDeleteTask = () => {
+    setShowDeleteConfirm(false);
+    setPendingDeleteTaskId(null);
   };
 
   const renderContent = () => {
@@ -146,19 +258,20 @@ export default function Home() {
 
   return (
     <div className="h-screen flex flex-col">
-      <Header activeNav={activeNav} onNavChange={setActiveNav} />
+      <Header activeNav={activeNav} onNavChange={handleNavChange} />
       <div className="flex-1 flex overflow-hidden">
         {renderContent()}
       </div>
 
       {/* 任务管理中心 */}
-      {taskCenterOpen && activeNav === '数据管理' && (
+      {taskCenterOpen && (
         <TaskManagementCenter
           isOpen={taskCenterOpen}
           onClose={() => setTaskCenterOpen(false)}
           tasks={tasks}
-          onCloseTask={closeTask}
+          onCloseTask={handleDeleteTask}
           onClearCompleted={clearCompleted}
+          onMarkSaved={markSavedToDirectory}
         />
       )}
 
@@ -171,13 +284,74 @@ export default function Home() {
         />
       )}
 
-      {/* 上传文件弹窗 */}
+      {/* 上传文件弹窗 - 仅在数据管理页面渲染 */}
       {activeNav === '数据管理' && (
         <UploadFileModal
           isOpen={uploadModalOpen}
           onClose={() => setUploadModalOpen(false)}
           onUploadFile={handleUploadFile}
+          onProgress={handleUploadProgress}
+          onUploadingChange={handleUploadingChange}
+          onCancelUploadRef={setUploadCancelRef}
         />
+      )}
+
+      {/* 离开数据目录确认弹窗 */}
+      {showNavLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300]">
+          <div className="bg-white rounded-lg p-6 w-[360px] shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle size={24} className="text-orange-500 flex-shrink-0" />
+              <h3 className="text-lg font-semibold text-gray-800">确认离开数据目录？</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              当前文件正在上传中，离开将中断上传流程，确定要离开吗？
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelNavLeave}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+              >
+                继续上传
+              </button>
+              <button
+                onClick={confirmNavLeave}
+                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
+              >
+                确认离开
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 删除任务确认弹窗 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300]">
+          <div className="bg-white rounded-lg p-6 w-[360px] shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle size={24} className="text-orange-500 flex-shrink-0" />
+              <h3 className="text-lg font-semibold text-gray-800">确认删除任务？</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              该任务的结果尚未另存到数据目录，删除后将无法恢复，确定要删除吗？
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelDeleteTask}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmDeleteTask}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

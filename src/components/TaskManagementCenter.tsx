@@ -8,13 +8,15 @@ interface TaskManagementCenterProps {
   tasks: Task[];
   onCloseTask: (taskId: string) => void;
   onClearCompleted: () => void;
+  onMarkSaved?: (taskId: string) => void;
 }
 
 const SaveToDirectoryModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
+  onSave: () => void;
   task: Task;
-}> = ({ isOpen, onClose, task }) => {
+}> = ({ isOpen, onClose, onSave, task }) => {
   const [dataName, setDataName] = useState(`导出-${task.name}`);
   const [targetLibrary, setTargetLibrary] = useState<'standard' | 'fusion'>('standard');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -32,6 +34,7 @@ const SaveToDirectoryModal: React.FC<{
 
   const handleConfirm = () => {
     console.log('保存到数据目录:', { taskId: task.id, dataName, targetLibrary, selectedFolder });
+    onSave();
     onClose();
   };
 
@@ -133,10 +136,11 @@ const SaveToDirectoryModal: React.FC<{
   );
 };
 
-const TaskItemInCenter: React.FC<{ 
-  task: Task; 
+const TaskItemInCenter: React.FC<{
+  task: Task;
   onClose: () => void;
-}> = ({ task, onClose }) => {
+  onSave: () => void;
+}> = ({ task, onClose, onSave }) => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const progressPercentage = Math.min(task.progress, 100);
 
@@ -241,7 +245,7 @@ const TaskItemInCenter: React.FC<{
                   className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs transition-colors"
                 >
                   <Layers size={14} />
-                  导出到图层
+                  添加到图层
                 </button>
                 <button
                   onClick={handleDownload}
@@ -271,18 +275,20 @@ const TaskItemInCenter: React.FC<{
       <SaveToDirectoryModal
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
+        onSave={onSave}
         task={task}
       />
     </>
   );
 };
 
-const TaskManagementCenter: React.FC<TaskManagementCenterProps> = ({ 
-  isOpen, 
-  onClose, 
-  tasks, 
-  onCloseTask, 
-  onClearCompleted 
+const TaskManagementCenter: React.FC<TaskManagementCenterProps> = ({
+  isOpen,
+  onClose,
+  tasks,
+  onCloseTask,
+  onClearCompleted,
+  onMarkSaved,
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'processing' | 'completed' | 'failed'>('all');
 
@@ -381,6 +387,7 @@ const TaskManagementCenter: React.FC<TaskManagementCenterProps> = ({
                 key={task.id}
                 task={task}
                 onClose={() => onCloseTask(task.id)}
+                onSave={() => onMarkSaved?.(task.id)}
               />
             ))
           )}

@@ -15,6 +15,9 @@ interface UploadFileModalProps {
     _stageFailure?: string;
     _stageKey?: string;
   }) => void;
+  onProgress?: (progress: number, stageText?: string) => void;
+  onUploadingChange?: (uploading: boolean) => void;
+  onCancelUploadRef?: (ref: { cancel: () => void } | null) => void;
   onDirectorySelect?: (path: string) => void;
   initialDirectory?: string;
   initialDataName?: string;
@@ -52,7 +55,7 @@ const UPLOAD_STAGES = [
   { key: 'parsing',    label: '正在解析数据内容',         progressRange: [70, 100], failRate: 0.05 },
 ];
 
-export default function UploadFileModal({ isOpen, onClose, onUploadFile }: UploadFileModalProps) {
+export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgress, onUploadingChange, onCancelUploadRef }: UploadFileModalProps) {
   const [dataName, setDataName] = useState('');
   const [selectedDataType, setSelectedDataType] = useState('vector');
   const [description, setDescription] = useState('');
@@ -75,12 +78,18 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCloseRef = useRef(onClose);
   const onUploadFileRef = useRef(onUploadFile);
+  const onProgressRef = useRef(onProgress);
+  const onUploadingChangeRef = useRef(onUploadingChange);
+  const onCancelUploadRefRef = useRef(onCancelUploadRef);
   const selectedDataTypeRef = useRef(selectedDataType);
   const dataTypesRef = useRef<Array<{id: string; label: string}>>([]);
 
   // Keep latest callbacks/refs in sync
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => { onUploadFileRef.current = onUploadFile; }, [onUploadFile]);
+  useEffect(() => { onProgressRef.current = onProgress; }, [onProgress]);
+  useEffect(() => { onUploadingChangeRef.current = onUploadingChange; }, [onUploadingChange]);
+  useEffect(() => { onCancelUploadRefRef.current = onCancelUploadRef; }, [onCancelUploadRef]);
   useEffect(() => { selectedDataTypeRef.current = selectedDataType; }, [selectedDataType]);
 
   const dataTypes = [
@@ -118,6 +127,30 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
+
+  // Notify parent of uploading state changes
+  useEffect(() => {
+    onUploadingChangeRef.current?.(processing);
+  }, [processing]);
+
+  // Expose cancel method to parent (for nav-leave / external cancellation)
+  useEffect(() => {
+    if (!onCancelUploadRefRef.current) return;
+    onCancelUploadRefRef.current({
+      cancel: () => {
+        if (tickRef.current) clearInterval(tickRef.current);
+        tickRef.current = null;
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+        // Don't trigger success/failure callback here — parent already knows about the failure
+        setProcessing(false);
+        onCloseRef.current();
+      },
+    });
+    return () => {
+      onCancelUploadRefRef.current?.(null);
+    };
+  }, [onCancelUploadRefRef]);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -181,6 +214,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
       if (progress >= stage.progressRange[1]) {
         progress = stage.progressRange[1];
         setUploadProgress(progress);
+        onProgressRef.current?.(Math.round(progress), stage.label);
 
         // Check for stage failure: random probability OR backend validation error
         let stageError: string | null = null;
@@ -217,6 +251,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           tickRef.current = null;
           setUploadProgress(100);
           setUploadDone(true);
+          onProgressRef.current?.(100, '上传完成');
           // Notify parent: task completed
           onUploadFileRef.current?.({
             file: fileRef!,
@@ -235,6 +270,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
         }
       } else {
         setUploadProgress(Math.round(progress));
+        onProgressRef.current?.(Math.round(progress), stage.label);
       }
     }, 200);
 
@@ -324,179 +360,21 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
 
   if (!isOpen) return null;
 
-  // ========== PROCESSING VIEW ==========
-  if (processing) {
-    const stageIcons = UPLOAD_STAGES.map((stage, idx) => {
-      if (idx < currentStageIdx) return 'done';
-      if (idx === currentStageIdx && !uploadDone && !uploadFailed) return 'active';
-      if (idx === currentStageIdx && uploadFailed) return 'failed';
-      return 'pending';
-    });
-
-    return (
-      <div className="fixed inset-0 flex justify-end z-[200]">
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="relative w-[480px] h-full bg-white shadow-2xl flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">
-              {uploadFailed ? '上传失败' : uploadDone ? '上传完成' : '正在上传'}
-            </h2>
-            <button
-              onClick={handleCancelUpload}
-              className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            {/* File info */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="flex items-center gap-3">
-                <FileText size={20} className="text-gray-500" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{selectedFile?.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {selectedFile ? (selectedFile.size / 1024 / 1024).toFixed(2) : '0'} MB
-                    {' · '}
-                    {dataTypes.find(t => t.id === selectedDataType)?.label}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Progress bar */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600">
-                  {uploadFailed ? '处理中断' : uploadDone ? '全部完成' : '处理中...'}
-                </span>
-                <span className="text-sm font-medium text-blue-600">{uploadProgress}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 rounded-full ${
-                    uploadFailed ? 'bg-red-500' : uploadDone ? 'bg-green-500' : 'bg-blue-600'
-                  }`}
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Stage list */}
-            <div className="space-y-3">
-              {UPLOAD_STAGES.map((stage, idx) => {
-                const icon = stageIcons[idx];
-                return (
-                  <div
-                    key={stage.key}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                      icon === 'active'
-                        ? 'border-blue-300 bg-blue-50'
-                        : icon === 'done'
-                        ? 'border-green-200 bg-green-50/50'
-                        : icon === 'failed'
-                        ? 'border-red-200 bg-red-50'
-                        : 'border-gray-200 bg-white'
-                    }`}
-                  >
-                    <div className="flex-shrink-0">
-                      {icon === 'done' && <CheckCircle size={20} className="text-green-500" />}
-                      {icon === 'active' && <Loader2 size={20} className="text-blue-600 animate-spin" />}
-                      {icon === 'failed' && <AlertCircle size={20} className="text-red-500" />}
-                      {icon === 'pending' && (
-                        <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm font-medium ${
-                          icon === 'active' ? 'text-blue-700' : icon === 'done' ? 'text-green-700' : icon === 'failed' ? 'text-red-700' : 'text-gray-500'
-                        }`}
-                      >
-                        {stage.label}
-                      </p>
-                      {idx < UPLOAD_STAGES.length - 1 && icon === 'active' && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          预计还需 {Math.ceil((stage.progressRange[1] - uploadProgress) / 6)} 秒
-                        </p>
-                      )}
-                    </div>
-                    {icon === 'done' && (
-                      <span className="text-xs text-green-600 font-medium">完成</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Error message */}
-            {uploadFailed && (
-              <div className="mt-4 p-3 bg-red-100 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-700">{uploadFailed}</p>
-              </div>
-            )}
-
-            {/* Success message */}
-            {uploadDone && (
-              <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
-                <CheckCircle size={24} className="text-green-500 mx-auto mb-1" />
-                <p className="text-sm text-green-700 font-medium">文件上传并校验完成</p>
-                <p className="text-xs text-green-600 mt-1">即将自动关闭...</p>
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
-            <button
-              onClick={handleCancelUpload}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
-            >
-              {uploadDone || uploadFailed ? '关闭' : '取消上传'}
-            </button>
-          </div>
-
-          {showLeaveConfirm && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-[10]">
-              <div className="bg-white rounded-lg p-6 w-[320px] shadow-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <AlertCircle size={24} className="text-orange-500 flex-shrink-0" />
-                  <h3 className="text-lg font-semibold text-gray-800">确认离开？</h3>
-                </div>
-                <p className="text-sm text-gray-600 mb-6">
-                  当前文件正在上传中，离开将中断上传流程，确定要离开吗？
-                </p>
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={cancelLeave}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
-                  >
-                    继续上传
-                  </button>
-                  <button
-                    onClick={confirmLeave}
-                    className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
-                  >
-                    确认离开
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   // ========== FORM VIEW ==========
   return (
     <div className="fixed inset-0 flex justify-end z-[200]">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50" onClick={() => {
+        if (processing) {
+          setShowLeaveConfirm(true);
+        } else {
+          onClose();
+        }
+      }} />
       <div className="relative w-[480px] h-full bg-white shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">上传文件</h2>
           <button
-            onClick={onClose}
+            onClick={handleCancelUpload}
             className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded"
           >
             <X size={20} />
@@ -669,20 +547,48 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
 
         <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
           <button
-            onClick={onClose}
+            onClick={handleCancelUpload}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
           >
             取消
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!dataName || !selectedFile || !!formatError}
+            disabled={processing || !dataName || !selectedFile || !!formatError}
             className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            确定
+            {processing ? '上传中...' : '确定'}
           </button>
         </div>
       </div>
+
+      {showLeaveConfirm && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-[10]">
+          <div className="bg-white rounded-lg p-6 w-[320px] shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle size={24} className="text-orange-500 flex-shrink-0" />
+              <h3 className="text-lg font-semibold text-gray-800">确认离开？</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              当前文件正在上传中，离开将中断上传流程，确定要离开吗？
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelLeave}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+              >
+                继续上传
+              </button>
+              <button
+                onClick={confirmLeave}
+                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
+              >
+                确认离开
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

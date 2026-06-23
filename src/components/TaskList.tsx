@@ -13,6 +13,10 @@ export interface Task {
   dataName?: string;
   stage?: 'uploading' | 'validating' | 'parsing' | 'storing';
   stageText?: string;
+  // 工具箱任务：是否已另存到目录
+  savedToDirectory?: boolean;
+  // 任务来源：'upload' = 上传文件，'toolbox' = 工具箱
+  source?: 'upload' | 'toolbox';
 }
 
 interface TaskListProps {
@@ -25,8 +29,9 @@ interface TaskListProps {
 const SaveToDirectoryModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
+  onSave?: () => void;
   task: Task;
-}> = ({ isOpen, onClose, task }) => {
+}> = ({ isOpen, onClose, onSave, task }) => {
   const [dataName, setDataName] = useState(`导出-${task.name}`);
   const [targetLibrary, setTargetLibrary] = useState<'standard' | 'fusion'>('standard');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -55,6 +60,7 @@ const SaveToDirectoryModal: React.FC<{
 
   const handleConfirm = () => {
     console.log('保存到数据目录:', { taskId: task.id, dataName, targetLibrary, selectedFolder });
+    onSave?.();
     onClose();
   };
 
@@ -232,13 +238,13 @@ const SaveToDirectoryModal: React.FC<{
   );
 };
 
-const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose }) => {
+const TaskItem: React.FC<{ task: Task; onClose: () => void; onSave?: () => void }> = ({ task, onClose, onSave }) => {
   const progressPercentage = Math.min(task.progress, 100);
   const [showSaveModal, setShowSaveModal] = useState(false);
 
   const handleExportToLayer = (e) => {
     e.stopPropagation();
-    console.log('导出到图层管理:', task.id);
+    console.log('添加到图层:', task.id);
   };
 
   const handleDownload = (e) => {
@@ -337,7 +343,7 @@ const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose
                 <button
                   onClick={handleExportToLayer}
                   className="flex items-center justify-center p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                  title="导出到图层管理"
+                  title="添加到图层"
                 >
                   <Layers size={16} />
                 </button>
@@ -363,6 +369,7 @@ const TaskItem: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose
       <SaveToDirectoryModal
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
+        onSave={onSave}
         task={task}
       />
     </>
@@ -469,7 +476,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearComplete
 export const useTaskManager = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const addTask = useCallback((taskName: string, fileSize?: string, dataType?: string, dataName?: string): string => {
+  const addTask = useCallback((taskName: string, fileSize?: string, dataType?: string, dataName?: string, source: 'upload' | 'toolbox' = 'toolbox'): string => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const newTask: Task = {
       id,
@@ -482,6 +489,7 @@ export const useTaskManager = () => {
       dataName,
       stage: dataType ? 'uploading' : undefined,
       stageText: dataType ? '正在上传文件' : undefined,
+      source,
     };
     setTasks(prev => [...prev, newTask]);
     return id;
@@ -516,6 +524,14 @@ export const useTaskManager = () => {
     setTasks(prev => prev.filter(task => task.id !== taskId));
   }, []);
 
+  const markSavedToDirectory = useCallback((taskId: string) => {
+    setTasks(prev =>
+      prev.map(task =>
+        task.id === taskId ? { ...task, savedToDirectory: true } : task
+      )
+    );
+  }, []);
+
   const clearCompleted = useCallback(() => {
     setTasks(prev => prev.filter(task => task.status !== 'completed' && task.status !== 'failed'));
   }, []);
@@ -526,6 +542,7 @@ export const useTaskManager = () => {
     updateTaskProgress,
     updateTaskStatus,
     closeTask,
+    markSavedToDirectory,
     clearCompleted,
   };
 };
