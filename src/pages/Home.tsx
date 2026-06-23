@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import MapView from '../components/MapView';
@@ -41,47 +41,123 @@ export default function Home() {
 
   // Track the latest upload task id so simulation updates can target the same task
   const latestUploadTaskIdRef = useRef<string | null>(null);
-  // Ref to trigger upload cancellation from the modal (used when leaving the page)
-  const cancelUploadRef = useRef<(() => void) | null>(null);
+  // 后台上传 interval 句柄
+  const uploadIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // 上传阶段状态（脱离弹窗生命周期）
+  const uploadStateRef = useRef<{
+    stageIdx: number;
+    progress: number;
+    file: File;
+    dataType: string;
+    dataName: string;
+  } | null>(null);
 
-  const setUploadCancelRef = useCallback((ref: { cancel: () => void } | null) => {
-    cancelUploadRef.current = ref ? ref.cancel : null;
-  }, []);
-
-  const handleUploadFile = (payload: { file: File; dataType: string; dataName: string; description: string; checkProjection: boolean; targetDirectory?: string; _stageSuccess?: boolean; _stageFailure?: string; _stageKey?: string }) => {
-    // Case 1: stage failure callback from UploadFileModal -> mark the task as failed
-    if (payload._stageFailure && latestUploadTaskIdRef.current) {
-      updateTaskStatus(latestUploadTaskIdRef.current, 'failed', payload._stageFailure);
-      latestUploadTaskIdRef.current = null;
-      return;
-    }
-    // Case 2: stage success callback -> mark the task as completed
-    if (payload._stageSuccess && latestUploadTaskIdRef.current) {
-      updateTaskStatus(latestUploadTaskIdRef.current, 'completed');
-      latestUploadTaskIdRef.current = null;
-      return;
-    }
-    // Case 3: initial create-task call
+  // ========== Upload file handling ==========
+  const handleUploadFile = (payload: { file: File; dataType: string; dataName: string; description: string; checkProjection: boolean; targetDirectory?: string }) => {
+    // 创建任务记录
     const fileSize = formatFileSize(payload.file.size);
-    const taskId = addTask(`上传: ${payload.dataName}`, fileSize, payload.dataType, payload.dataName, 'upload');
+    const taskId = addTask(
+      `上传: ${payload.dataName}`,
+      fileSize,
+      payload.dataType,
+      payload.dataName,
+      'upload',
+      'data_catalog'
+    );
     latestUploadTaskIdRef.current = taskId;
     setTaskCenterOpen(true);
   };
 
-  // 上传进度回调
-  const handleUploadProgress = (progress: number, stageText?: string) => {
-    if (latestUploadTaskIdRef.current) {
-      updateTaskProgress(latestUploadTaskIdRef.current, progress, { stageText });
-    }
-  };
+  // 启动后台上传模拟（弹窗关闭后仍可继续）
+  const handleStartUpload = useCallback(
+    (params: { file: File; dataType: string; dataName: string }) => {
+      if (!latestUploadTaskIdRef.current) return;
+      // 初始化模拟状态
+      const UPLOAD_STAGES = [
+        { key: 'uploading',  label: '正在上传文件到服务器', progressRange: [0, 30] },
+        { key: 'validating', label: '后端格式与质量校验中',  progressRange: [30, 70], failRate: 0.15 },
+        { key: 'parsing',    label: '正在解析数据内容',      progressRange: [70, 100], failRate: 0.05 },
+      ];
+      uploadStateRef.current = {
+        stageIdx: 0,
+        progress: 0,
+        file: params.file,
+        dataType: params.dataType,
+        dataName: params.dataName,
+      };
+      setIsUploading(true);
 
-  // 上传状态变化回调
-  const handleUploadingChange = useCallback((uploading: boolean) => {
-    setIsUploading(uploading);
-  }, []);
+      // 立即上报初始状态
+      updateTaskProgress(latestUploadTaskIdRef.current, 0, { stageText: UPLOAD_STAGES[0].label });
 
-  // 父组件提供的中断上传方法（供模态框内部使用，触发人为中断失败）
+      if (uploadIntervalRef.current) clearInterval(uploadIntervalRef.current);
+      uploadIntervalRef.current = setInterval(() => {
+        const state = uploadStateRef.current;
+        if (!state || !latestUploadTaskIdRef.current) return;
+
+        const stage = UPLOAD_STAGES[state.stageIdx];
+        state.progress += Math.random() * 4 + 2;
+
+        if (state.progress >= stage.progressRange[1]) {
+          state.progress = stage.progressRange[1];
+          updateTaskProgress(latestUploadTaskIdRef.current, Math.round(state.progress), {
+            stageText: stage.label,
+          });
+
+          // 阶段失败检测
+          let stageError: string | null = null;
+          if (stage.key === 'validating') {
+            // 模拟后端校验失败
+            if (Math.random() < 0.15) {
+              stageError = `校验失败：文件缺少时空属性或不符合${stage.label}`;
+            }
+          } else if (stage.failRate && Math.random() < stage.failRate) {
+            stageError = `校验失败：文件缺少时空属性或不符合${stage.label}`;
+          }
+
+          if (stageError) {
+            // 终止模拟，标记任务为失败
+            if (uploadIntervalRef.current) clearInterval(uploadIntervalRef.current);
+            uploadIntervalRef.current = null;
+            updateTaskStatus(
+              latestUploadTaskIdRef.current,
+              'failed',
+              stageError
+            );
+            uploadStateRef.current = null;
+            latestUploadTaskIdRef.current = null;
+            setIsUploading(false);
+            return;
+          }
+
+          state.stageIdx++;
+          if (state.stageIdx >= UPLOAD_STAGES.length) {
+            // 上传完成
+            if (uploadIntervalRef.current) clearInterval(uploadIntervalRef.current);
+            uploadIntervalRef.current = null;
+            updateTaskProgress(latestUploadTaskIdRef.current, 100, { stageText: '上传完成' });
+            updateTaskStatus(latestUploadTaskIdRef.current, 'completed');
+            uploadStateRef.current = null;
+            latestUploadTaskIdRef.current = null;
+            setIsUploading(false);
+            return;
+          }
+        } else {
+          updateTaskProgress(latestUploadTaskIdRef.current, Math.round(state.progress), {
+            stageText: stage.label,
+          });
+        }
+      }, 600);
+    },
+    [addTask, updateTaskProgress, updateTaskStatus]
+  );
+
+  // 取消当前上传（人为中断）
   const handleCancelUpload = useCallback(() => {
+    if (uploadIntervalRef.current) {
+      clearInterval(uploadIntervalRef.current);
+      uploadIntervalRef.current = null;
+    }
     if (latestUploadTaskIdRef.current) {
       updateTaskStatus(
         latestUploadTaskIdRef.current,
@@ -90,7 +166,19 @@ export default function Home() {
       );
       latestUploadTaskIdRef.current = null;
     }
+    uploadStateRef.current = null;
+    setIsUploading(false);
   }, [updateTaskStatus]);
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      if (uploadIntervalRef.current) {
+        clearInterval(uploadIntervalRef.current);
+        uploadIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   const handleExecute = (toolName: string, params?: any) => {
     if (toolName === '视频融合' && params) {
@@ -99,7 +187,7 @@ export default function Home() {
     }
     if (params?.success === false) {
       // 处理失败任务
-      const taskId = addTask(toolName, undefined, undefined, undefined, 'toolbox');
+      const taskId = addTask(toolName, undefined, undefined, undefined, 'toolbox_op', 'toolbox');
       updateTaskStatus(taskId, 'failed', params.error);
       setTaskCenterOpen(true);
     } else {
@@ -142,21 +230,8 @@ export default function Home() {
 
   // 确认离开数据目录：中断上传并切换导航
   const confirmNavLeave = () => {
-    // 1) 标记任务为失败
-    if (latestUploadTaskIdRef.current) {
-      updateTaskStatus(
-        latestUploadTaskIdRef.current,
-        'failed',
-        '人为中断：用户在中途选择离开'
-      );
-      latestUploadTaskIdRef.current = null;
-    }
-    // 2) 主动停止上传模拟（清理 tickRef 并关闭弹窗）
-    if (cancelUploadRef.current) {
-      cancelUploadRef.current();
-    } else {
-      setUploadModalOpen(false);
-    }
+    // 中断上传模拟 + 标记任务为失败
+    handleCancelUpload();
     setShowNavLeaveConfirm(false);
     const nextNav = pendingNav;
     setPendingNav(null);
@@ -172,12 +247,12 @@ export default function Home() {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     // 上传文件的任务：自动存储到数据目录，删除不加提示
-    if (task.source === 'upload') {
+    if (task.taskType === 'upload') {
       closeTask(taskId);
       return;
     }
     // 工具箱任务：未另存到目录的删除需确认
-    if (task.source === 'toolbox') {
+    if (task.taskType === 'toolbox_op') {
       if (task.savedToDirectory) {
         closeTask(taskId);
       } else {
@@ -290,9 +365,7 @@ export default function Home() {
           isOpen={uploadModalOpen}
           onClose={() => setUploadModalOpen(false)}
           onUploadFile={handleUploadFile}
-          onProgress={handleUploadProgress}
-          onUploadingChange={handleUploadingChange}
-          onCancelUploadRef={setUploadCancelRef}
+          onStartUpload={handleStartUpload}
         />
       )}
 

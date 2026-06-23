@@ -1,11 +1,39 @@
 import React, { useState, useCallback } from 'react';
 import { X, CheckCircle, Clock, ChevronDown, ChevronUp, Trash2, Layers, Download, FolderOpen, Box, Folder, Plus, Check, AlertCircle } from 'lucide-react';
 
+// =============================================================
+// 任务类型枚举（task_type）
+// 后端接口建议使用如下枚举值，对应前端 Task.source 字段。
+// 统一的状态机：
+//   status: pending / processing / completed / failed / cancelled
+//   error_code / error_message / error_category: 失败归因
+//   progress: 0-100
+//   stage / stage_text: 当前阶段标识与人类可读描述
+//   saved_to_directory: 是否已落地到数据目录
+// =============================================================
+export type TaskType =
+  | 'upload'             // 文件上传
+  | 'toolbox_op'         // 工具箱算子（视频融合、几何校正、镶嵌、融合等）
+  | 'model_compute'      // 模型计算（训练、推理）
+  | 'sample_annotation'  // 样本标注
+  | 'sample_slice'       // 样本切片
+  | 'data_export'        // 数据导出/打包/下载
+  | 'system';            // 系统级异步任务
+
+export type TaskSource =
+  | 'data_catalog'   // 数据管理页
+  | 'sample_panel'   // 样本标注页
+  | 'model_panel'    // 模型计算页
+  | 'toolbox'        // 工具箱
+  | 'system';        // 系统触发
+
+export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
 export interface Task {
   id: string;
   name: string;
   progress: number;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: TaskStatus;
   createdAt: number;
   error?: string;
   fileSize?: string;
@@ -13,10 +41,12 @@ export interface Task {
   dataName?: string;
   stage?: 'uploading' | 'validating' | 'parsing' | 'storing';
   stageText?: string;
-  // 工具箱任务：是否已另存到目录
+  // 工具箱任务：是否已另存到数据目录
   savedToDirectory?: boolean;
-  // 任务来源：'upload' = 上传文件，'toolbox' = 工具箱
-  source?: 'upload' | 'toolbox';
+  // 任务类型（业务域分类）
+  taskType?: TaskType;
+  // 任务来源（触发入口）
+  source?: TaskSource;
 }
 
 interface TaskListProps {
@@ -476,7 +506,14 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onCloseTask, onClearComplete
 export const useTaskManager = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  const addTask = useCallback((taskName: string, fileSize?: string, dataType?: string, dataName?: string, source: 'upload' | 'toolbox' = 'toolbox'): string => {
+  const addTask = useCallback((
+    taskName: string,
+    fileSize?: string,
+    dataType?: string,
+    dataName?: string,
+    taskType: TaskType = 'toolbox_op',
+    source: TaskSource = 'toolbox'
+  ): string => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const newTask: Task = {
       id,
@@ -489,6 +526,7 @@ export const useTaskManager = () => {
       dataName,
       stage: dataType ? 'uploading' : undefined,
       stageText: dataType ? '正在上传文件' : undefined,
+      taskType,
       source,
     };
     setTasks(prev => [...prev, newTask]);
@@ -548,12 +586,12 @@ export const useTaskManager = () => {
 };
 
 export const useTaskSimulation = (
-  addTask: (name: string) => string,
+  addTask: (name: string, fileSize?: string, dataType?: string, dataName?: string, taskType?: TaskType, source?: TaskSource) => string,
   updateTaskProgress: (id: string, progress: number) => void
 ) => {
   const startTask = useCallback((taskName: string) => {
-    const taskId = addTask(taskName);
-    
+    const taskId = addTask(taskName, undefined, undefined, undefined, 'toolbox_op', 'toolbox');
+
     let progress = 0;
     const interval = setInterval(() => {
       progress += Math.random() * 15 + 5;

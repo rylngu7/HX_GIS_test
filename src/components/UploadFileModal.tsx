@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { X, Upload, Map, Box, Image, FileText, CheckCircle, Loader2, AlertCircle, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, Upload, Map, Box, Image, AlertCircle, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface UploadFileModalProps {
   isOpen: boolean;
@@ -11,13 +11,13 @@ interface UploadFileModalProps {
     description: string;
     checkProjection: boolean;
     targetDirectory?: string;
-    _stageSuccess?: boolean;
-    _stageFailure?: string;
-    _stageKey?: string;
   }) => void;
-  onProgress?: (progress: number, stageText?: string) => void;
-  onUploadingChange?: (uploading: boolean) => void;
-  onCancelUploadRef?: (ref: { cancel: () => void } | null) => void;
+  // 启动后台模拟上传：父组件驱动 interval，弹窗立即关闭
+  onStartUpload?: (params: {
+    file: File;
+    dataType: string;
+    dataName: string;
+  }) => void;
   onDirectorySelect?: (path: string) => void;
   initialDirectory?: string;
   initialDataName?: string;
@@ -49,13 +49,19 @@ const validateFileByType = (file: File, dataType: string): string | null => {
   }
 };
 
-const UPLOAD_STAGES = [
-  { key: 'uploading',  label: '正在上传文件到服务器',      progressRange: [0, 30] },
-  { key: 'validating', label: '后端格式与质量校验中',     progressRange: [30, 70], failRate: 0.15 },
-  { key: 'parsing',    label: '正在解析数据内容',         progressRange: [70, 100], failRate: 0.05 },
+const dataTypes = [
+  { id: 'vector', label: '矢量数据', icon: Map, formats: '.zip (内含 .shp)', size: '20GB', detail: 'ZIP 压缩包的 shp 格式矢量数据' },
+  { id: 'raster', label: '栅格数据', icon: Image, formats: '.tif, .tiff', size: '20GB', detail: 'TIF / TIFF 格式栅格影像数据' },
+  { id: 'original-image', label: '原始影像数据', icon: AlertCircle, formats: '.zip, .tar.gz', size: '20GB', detail: '支持：高分1A / 高分1B / Landsat 8 / 资源三号02 / 高分2' },
+  { id: '3d', label: '三维数据', icon: Box, formats: '.zip (内含 .osgb)', size: '20GB', detail: 'ZIP 压缩包的 osgb 格式三维模型数据' },
 ];
 
-export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgress, onUploadingChange, onCancelUploadRef }: UploadFileModalProps) {
+export default function UploadFileModal({
+  isOpen,
+  onClose,
+  onUploadFile,
+  onStartUpload,
+}: UploadFileModalProps) {
   const [dataName, setDataName] = useState('');
   const [selectedDataType, setSelectedDataType] = useState('vector');
   const [description, setDescription] = useState('');
@@ -65,53 +71,21 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
   const [formatError, setFormatError] = useState('');
   const [userTouchedName, setUserTouchedName] = useState(false);
   const [targetDirectory, setTargetDirectory] = useState<string>('/data/原始库/矢量数据/2024年度');
-  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['/data', '/data/原始库', '/data/原始库/矢量数据']));
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(
+    new Set(['/data', '/data/原始库', '/data/原始库/矢量数据'])
+  );
 
-  // Processing states
-  const [processing, setProcessing] = useState(false);
-  const [currentStageIdx, setCurrentStageIdx] = useState(0);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadDone, setUploadDone] = useState(false);
-  const [uploadFailed, setUploadFailed] = useState('');
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onCloseRef = useRef(onClose);
-  const onUploadFileRef = useRef(onUploadFile);
-  const onProgressRef = useRef(onProgress);
-  const onUploadingChangeRef = useRef(onUploadingChange);
-  const onCancelUploadRefRef = useRef(onCancelUploadRef);
   const selectedDataTypeRef = useRef(selectedDataType);
-  const dataTypesRef = useRef<Array<{id: string; label: string}>>([]);
+  useEffect(() => {
+    selectedDataTypeRef.current = selectedDataType;
+  }, [selectedDataType]);
 
-  // Keep latest callbacks/refs in sync
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-  useEffect(() => { onUploadFileRef.current = onUploadFile; }, [onUploadFile]);
-  useEffect(() => { onProgressRef.current = onProgress; }, [onProgress]);
-  useEffect(() => { onUploadingChangeRef.current = onUploadingChange; }, [onUploadingChange]);
-  useEffect(() => { onCancelUploadRefRef.current = onCancelUploadRef; }, [onCancelUploadRef]);
-  useEffect(() => { selectedDataTypeRef.current = selectedDataType; }, [selectedDataType]);
-
-  const dataTypes = [
-    { id: 'vector', label: '矢量数据', icon: Map, formats: '.zip (内含 .shp)', size: '20GB', detail: 'ZIP 压缩包的 shp 格式矢量数据' },
-    { id: 'raster', label: '栅格数据', icon: Image, formats: '.tif, .tiff', size: '20GB', detail: 'TIF / TIFF 格式栅格影像数据' },
-    { id: 'original-image', label: '原始影像数据', icon: FileText, formats: '.zip, .tar.gz', size: '20GB', detail: '支持：高分1A / 高分1B / Landsat 8 / 资源三号02 / 高分2' },
-    { id: '3d', label: '三维数据', icon: Box, formats: '.zip (内含 .osgb)', size: '20GB', detail: 'ZIP 压缩包的 osgb 格式三维模型数据' },
-  ];
-
-  useEffect(() => { dataTypesRef.current = dataTypes; }, [dataTypes]);
-
-  // Reset all states when modal opens/closes
+  // Reset all states when modal opens
   useEffect(() => {
     if (isOpen) {
-      setProcessing(false);
-      setCurrentStageIdx(0);
-      setUploadProgress(0);
-      setUploadDone(false);
-      setUploadFailed('');
       setFormatError('');
+      setUserTouchedName(false);
     } else {
-      // Clear file when modal closes
       setSelectedFile(null);
       setDataName('');
       setDescription('');
@@ -119,38 +93,6 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
       setUserTouchedName(false);
     }
   }, [isOpen]);
-
-  // Cleanup intervals on unmount
-  useEffect(() => {
-    return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
-
-  // Notify parent of uploading state changes
-  useEffect(() => {
-    onUploadingChangeRef.current?.(processing);
-  }, [processing]);
-
-  // Expose cancel method to parent (for nav-leave / external cancellation)
-  useEffect(() => {
-    if (!onCancelUploadRefRef.current) return;
-    onCancelUploadRefRef.current({
-      cancel: () => {
-        if (tickRef.current) clearInterval(tickRef.current);
-        tickRef.current = null;
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-        // Don't trigger success/failure callback here — parent already knows about the failure
-        setProcessing(false);
-        onCloseRef.current();
-      },
-    });
-    return () => {
-      onCancelUploadRefRef.current?.(null);
-    };
-  }, [onCancelUploadRefRef]);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -179,164 +121,49 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
     if (files && files.length > 0) {
       applySelectedFile(files[0]);
     }
-    // Reset input value so selecting the same file again re-triggers onChange
     e.target.value = '';
   };
 
   const applySelectedFile = (file: File) => {
     setSelectedFile(file);
-    // Frontend format validation on selection
     const err = validateFileByType(file, selectedDataTypeRef.current);
     setFormatError(err || '');
-    // Auto-fill data name with file name (without extension) unless user already typed
     if (!userTouchedName) {
       const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
       setDataName(nameWithoutExt);
     }
   };
 
-  const startUploadSimulation = () => {
-    setProcessing(true);
-    setCurrentStageIdx(0);
-    setUploadProgress(0);
-    setUploadDone(false);
-    setUploadFailed('');
-
-    let stageIdx = 0;
-    let progress = 0;
-    const dataTypeLabel = dataTypesRef.current.find(t => t.id === selectedDataTypeRef.current)?.label || '';
-    const fileRef = selectedFile;
-
-    const tick = setInterval(() => {
-      const stage = UPLOAD_STAGES[stageIdx];
-      progress += Math.random() * 4 + 2;
-
-      if (progress >= stage.progressRange[1]) {
-        progress = stage.progressRange[1];
-        setUploadProgress(progress);
-        onProgressRef.current?.(Math.round(progress), stage.label);
-
-        // Check for stage failure: random probability OR backend validation error
-        let stageError: string | null = null;
-        if (stage.key === 'validating' && fileRef) {
-          // Hard-coded backend validation: vector + small zip = no shp
-          stageError = detectBackendValidationError(fileRef, selectedDataTypeRef.current);
-        }
-        if (!stageError && stage.failRate && Math.random() < stage.failRate) {
-          stageError = `校验失败：文件缺少时空属性或不符合${dataTypeLabel}数据规范`;
-        }
-
-        if (stageError) {
-          clearInterval(tick);
-          tickRef.current = null;
-          setUploadFailed(stageError);
-          // Notify parent (task manager) to mark this task as failed
-          onUploadFileRef.current?.({
-            file: fileRef!,
-            dataType: selectedDataTypeRef.current,
-            dataName: dataName.trim() || fileRef!.name.replace(/\.[^.]+$/, ''),
-            description,
-            checkProjection,
-            _stageFailure: stageError,
-            _stageKey: stage.key,
-          } as any);
-          return;
-        }
-
-        stageIdx++;
-        setCurrentStageIdx(stageIdx);
-
-        if (stageIdx >= UPLOAD_STAGES.length) {
-          clearInterval(tick);
-          tickRef.current = null;
-          setUploadProgress(100);
-          setUploadDone(true);
-          onProgressRef.current?.(100, '上传完成');
-          // Notify parent: task completed
-          onUploadFileRef.current?.({
-            file: fileRef!,
-            dataType: selectedDataTypeRef.current,
-            dataName: dataName.trim() || fileRef!.name.replace(/\.[^.]+$/, ''),
-            description,
-            checkProjection,
-            _stageSuccess: true,
-          } as any);
-          // Auto close after showing success - use ref to avoid stale closure (React #185)
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          timeoutRef.current = setTimeout(() => {
-            onCloseRef.current();
-          }, 1800);
-          return;
-        }
-      } else {
-        setUploadProgress(Math.round(progress));
-        onProgressRef.current?.(Math.round(progress), stage.label);
-      }
-    }, 200);
-
-    tickRef.current = tick;
-  };
-
   const handleConfirm = () => {
     if (!selectedFile) return;
 
-    // Frontend format validation
     const err = validateFileByType(selectedFile, selectedDataType);
     if (err) {
       setFormatError(err);
       return;
     }
 
-    // Call parent to create task (don't pass _stageSuccess/_stageFailure on initial call)
-    onUploadFileRef.current?.({
+    const finalName = dataName.trim() || selectedFile.name.replace(/\.[^.]+$/, '');
+
+    // 1) 创建任务记录
+    onUploadFile?.({
       file: selectedFile,
       dataType: selectedDataType,
-      dataName: dataName.trim() || selectedFile.name.replace(/\.[^.]+$/, ''),
+      dataName: finalName,
       description,
       checkProjection,
       targetDirectory,
     });
 
-    startUploadSimulation();
-  };
+    // 2) 启动后台上传模拟（由父组件驱动，与弹窗生命周期解耦）
+    onStartUpload?.({
+      file: selectedFile,
+      dataType: selectedDataType,
+      dataName: finalName,
+    });
 
-  const handleCancelUpload = () => {
-    if (processing && !uploadDone && !uploadFailed) {
-      setShowLeaveConfirm(true);
-      return;
-    }
-    if (tickRef.current) clearInterval(tickRef.current);
-    tickRef.current = null;
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = null;
-    onCloseRef.current();
-  };
-
-  const confirmLeave = () => {
-    if (tickRef.current) clearInterval(tickRef.current);
-    tickRef.current = null;
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = null;
-
-    // 通知父组件上传被用户中断，将任务标记为失败
-    if (selectedFile && processing) {
-      onUploadFileRef.current?.({
-        file: selectedFile,
-        dataType: selectedDataTypeRef.current,
-        dataName: dataName.trim() || selectedFile.name.replace(/\.[^.]+$/, ''),
-        description,
-        checkProjection,
-        _stageFailure: '人为中断：用户在中途选择离开',
-        _stageKey: 'uploading',
-      } as any);
-    }
-
-    setShowLeaveConfirm(false);
-    onCloseRef.current();
-  };
-
-  const cancelLeave = () => {
-    setShowLeaveConfirm(false);
+    // 3) 弹窗立即关闭，回到数据目录
+    onClose();
   };
 
   // Switch data type -> clear file (and any related state) for proper isolation
@@ -345,36 +172,18 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
     setSelectedDataType(newType);
     setSelectedFile(null);
     setFormatError('');
-    // Re-validate the current data name against new type if there's a file
-  };
-
-  // Mock backend validation: detect "zip without .shp" failure pattern
-  const detectBackendValidationError = (file: File, dataType: string): string | null => {
-    const name = file.name.toLowerCase();
-    // Heuristic: zip files that are very small (< 10KB) are mocked as "no .shp inside"
-    if (dataType === 'vector' && name.endsWith('.zip') && file.size < 10 * 1024) {
-      return '后端校验失败：zip 压缩包内未检测到 .shp 矢量文件，请检查数据完整性';
-    }
-    return null;
   };
 
   if (!isOpen) return null;
 
-  // ========== FORM VIEW ==========
   return (
     <div className="fixed inset-0 flex justify-end z-[200]">
-      <div className="absolute inset-0 bg-black/50" onClick={() => {
-        if (processing) {
-          setShowLeaveConfirm(true);
-        } else {
-          onClose();
-        }
-      }} />
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-[480px] h-full bg-white shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">上传文件</h2>
           <button
-            onClick={handleCancelUpload}
+            onClick={onClose}
             className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded"
           >
             <X size={20} />
@@ -390,7 +199,10 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
               <input
                 type="text"
                 value={dataName}
-                onChange={(e) => { setDataName(e.target.value); setUserTouchedName(true); }}
+                onChange={(e) => {
+                  setDataName(e.target.value);
+                  setUserTouchedName(true);
+                }}
                 placeholder="请输入数据名称"
                 maxLength={100}
                 className="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -420,7 +232,11 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
                     }`}
                   >
                     <Icon size={24} className={isSelected ? 'text-blue-600' : 'text-gray-500'} />
-                    <span className={`text-sm font-medium ${isSelected ? 'text-blue-800' : 'text-gray-700'}`}>
+                    <span
+                      className={`text-sm font-medium ${
+                        isSelected ? 'text-blue-800' : 'text-gray-700'
+                      }`}
+                    >
                       {type.label}
                     </span>
                   </button>
@@ -440,21 +256,35 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
                   ? 'border-blue-500 bg-blue-50'
                   : formatError
                     ? 'bg-red-50 border-red-300'
-                    : selectedFile ? 'bg-green-50 border-green-300' : 'border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/30'
+                    : selectedFile
+                      ? 'bg-green-50 border-green-300'
+                      : 'border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/30'
               }`}
             >
               <Upload
                 size={40}
                 className={`mx-auto mb-3 ${
-                  isDragging ? 'text-blue-500' : formatError ? 'text-red-500' : selectedFile ? 'text-green-500' : 'text-gray-400'
+                  isDragging
+                    ? 'text-blue-500'
+                    : formatError
+                      ? 'text-red-500'
+                      : selectedFile
+                        ? 'text-green-500'
+                        : 'text-gray-400'
                 }`}
               />
               {selectedFile ? (
                 <div>
                   <p className="text-sm text-gray-700 font-medium mb-1">{selectedFile.name}</p>
-                  <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <p className="text-xs text-gray-500">
+                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setSelectedFile(null); setFormatError(''); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFile(null);
+                      setFormatError('');
+                    }}
                     className="mt-2 text-sm text-red-600 hover:text-red-700"
                   >
                     移除文件
@@ -470,11 +300,13 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
                   </label>
                   <p className="text-xs text-gray-500">
                     请点击上传或拖拽文件到此处，文件大小不能超过 20GB，支持格式：
-                    <span className="text-gray-700 font-medium">{dataTypes.find(t => t.id === selectedDataType)?.formats}</span>
+                    <span className="text-gray-700 font-medium">
+                      {dataTypes.find((t) => t.id === selectedDataType)?.formats}
+                    </span>
                   </p>
                   {selectedDataType === 'original-image' && (
                     <p className="text-xs text-gray-400 mt-1">
-                      {dataTypes.find(t => t.id === selectedDataType)?.detail}
+                      {dataTypes.find((t) => t.id === selectedDataType)?.detail}
                     </p>
                   )}
                 </div>
@@ -503,7 +335,9 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
             <label className="text-sm font-medium text-gray-700">投影缺失检查</label>
             <button
               onClick={() => setCheckProjection(!checkProjection)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${checkProjection ? 'bg-blue-600' : 'bg-gray-300'}`}
+              className={`w-12 h-6 rounded-full transition-colors relative ${
+                checkProjection ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
             >
               <div
                 className={`w-5 h-5 bg-white rounded-full shadow absolute top-0.5 transition-transform ${
@@ -520,7 +354,9 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
               </label>
               <button
                 type="button"
-                onClick={() => {/* placeholder: 新增目录 */}}
+                onClick={() => {
+                  /* placeholder: 新增目录 */
+                }}
                 className="text-xs px-2 py-1 text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
               >
                 + 新增目录
@@ -530,7 +366,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
               selectedPath={targetDirectory}
               expandedDirs={expandedDirs}
               onToggleExpand={(path) => {
-                setExpandedDirs(prev => {
+                setExpandedDirs((prev) => {
                   const next = new Set(prev);
                   if (next.has(path)) next.delete(path);
                   else next.add(path);
@@ -547,48 +383,20 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile, onProgr
 
         <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
           <button
-            onClick={handleCancelUpload}
+            onClick={onClose}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
           >
             取消
           </button>
           <button
             onClick={handleConfirm}
-            disabled={processing || !dataName || !selectedFile || !!formatError}
+            disabled={!dataName || !selectedFile || !!formatError}
             className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {processing ? '上传中...' : '确定'}
+            确定
           </button>
         </div>
       </div>
-
-      {showLeaveConfirm && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-[10]">
-          <div className="bg-white rounded-lg p-6 w-[320px] shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertCircle size={24} className="text-orange-500 flex-shrink-0" />
-              <h3 className="text-lg font-semibold text-gray-800">确认离开？</h3>
-            </div>
-            <p className="text-sm text-gray-600 mb-6">
-              当前文件正在上传中，离开将中断上传流程，确定要离开吗？
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={cancelLeave}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
-              >
-                继续上传
-              </button>
-              <button
-                onClick={confirmLeave}
-                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
-              >
-                确认离开
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -688,25 +496,35 @@ function DirectoryTree({ selectedPath, expandedDirs, onToggleExpand, onSelect }:
           }}
         >
           {!isLeaf ? (
-            isExpanded ? <ChevronDown size={14} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={14} className="text-gray-400 flex-shrink-0" />
+            isExpanded ? (
+              <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
+            ) : (
+              <ChevronRight size={14} className="text-gray-400 flex-shrink-0" />
+            )
           ) : (
             <span className="w-3.5 flex-shrink-0" />
           )}
           {isExpanded ? (
-            <FolderOpen size={14} className={`flex-shrink-0 ${isSelected ? 'text-blue-600' : 'text-yellow-500'}`} />
+            <FolderOpen
+              size={14}
+              className={`flex-shrink-0 ${isSelected ? 'text-blue-600' : 'text-yellow-500'}`}
+            />
           ) : (
-            <Folder size={14} className={`flex-shrink-0 ${isSelected ? 'text-blue-600' : 'text-yellow-500'}`} />
+            <Folder
+              size={14}
+              className={`flex-shrink-0 ${isSelected ? 'text-blue-600' : 'text-yellow-500'}`}
+            />
           )}
           <span className="truncate">{node.name}</span>
         </div>
-        {!isLeaf && isExpanded && node.children?.map(child => renderNode(child, level + 1))}
+        {!isLeaf && isExpanded && node.children?.map((child) => renderNode(child, level + 1))}
       </div>
     );
   };
 
   return (
     <div className="border border-gray-200 rounded-lg p-2 max-h-56 overflow-y-auto bg-white">
-      {renderNode(DIRECTORY_TREE, 0)}
+      {renderNode(DIRECTORY_TREE)}
     </div>
   );
 }
