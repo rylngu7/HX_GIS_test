@@ -70,6 +70,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadDone, setUploadDone] = useState(false);
   const [uploadFailed, setUploadFailed] = useState('');
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCloseRef = useRef(onClose);
@@ -264,11 +265,27 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
   };
 
   const handleCancelUpload = () => {
+    if (processing && !uploadDone && !uploadFailed) {
+      setShowLeaveConfirm(true);
+      return;
+    }
     if (tickRef.current) clearInterval(tickRef.current);
     tickRef.current = null;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = null;
     onCloseRef.current();
+  };
+
+  const confirmLeave = () => {
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = null;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = null;
+    onCloseRef.current();
+  };
+
+  const cancelLeave = () => {
+    setShowLeaveConfirm(false);
   };
 
   // Switch data type -> clear file (and any related state) for proper isolation
@@ -311,7 +328,8 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
             </h2>
             <button
               onClick={handleCancelUpload}
-              className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded"
+              disabled={!uploadDone && !uploadFailed}
+              className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X size={20} />
             </button>
@@ -418,11 +436,40 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
             <button
               onClick={handleCancelUpload}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+              disabled={!uploadDone && !uploadFailed}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {uploadDone || uploadFailed ? '关闭' : '取消上传'}
             </button>
           </div>
+
+          {showLeaveConfirm && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-[10]">
+              <div className="bg-white rounded-lg p-6 w-[320px] shadow-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <AlertCircle size={24} className="text-orange-500 flex-shrink-0" />
+                  <h3 className="text-lg font-semibold text-gray-800">确认离开？</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-6">
+                  当前文件正在上传中，离开将中断上传流程，确定要离开吗？
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={cancelLeave}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                  >
+                    继续上传
+                  </button>
+                  <button
+                    onClick={confirmLeave}
+                    className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
+                  >
+                    确认离开
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
