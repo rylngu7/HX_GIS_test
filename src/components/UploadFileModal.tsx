@@ -328,8 +328,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
             </h2>
             <button
               onClick={handleCancelUpload}
-              disabled={!uploadDone && !uploadFailed}
-              className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded"
             >
               <X size={20} />
             </button>
@@ -436,8 +435,7 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
           <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
             <button
               onClick={handleCancelUpload}
-              disabled={!uploadDone && !uploadFailed}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
             >
               {uploadDone || uploadFailed ? '关闭' : '取消上传'}
             </button>
