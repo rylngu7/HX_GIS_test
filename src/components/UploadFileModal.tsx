@@ -281,6 +281,21 @@ export default function UploadFileModal({ isOpen, onClose, onUploadFile }: Uploa
     tickRef.current = null;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = null;
+
+    // 通知父组件上传被用户中断，将任务标记为失败
+    if (selectedFile && processing) {
+      onUploadFileRef.current?.({
+        file: selectedFile,
+        dataType: selectedDataTypeRef.current,
+        dataName: dataName.trim() || selectedFile.name.replace(/\.[^.]+$/, ''),
+        description,
+        checkProjection,
+        _stageFailure: '人为中断：用户在中途选择离开',
+        _stageKey: 'uploading',
+      } as any);
+    }
+
+    setShowLeaveConfirm(false);
     onCloseRef.current();
   };
 
