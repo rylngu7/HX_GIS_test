@@ -8,6 +8,8 @@ import ModelCompute from '../components/ModelCompute';
 import { useTaskManager, useTaskSimulation } from '../components/TaskList';
 import ExportModal from '../components/ExportModal';
 import UploadFileModal from '../components/UploadFileModal';
+import DataDetailDrawer from '../components/DataDetailDrawer';
+import { useDataCatalog, DataFile } from '../components/DataCatalogStore';
 import { Clock, Briefcase, AlertCircle, X } from 'lucide-react';
 
 export default function Home() {
@@ -265,6 +267,38 @@ export default function Home() {
     closeTask(taskId);
   };
 
+  // ========== 数据目录 ==========
+  const dataCatalog = useDataCatalog();
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [currentDetailFile, setCurrentDetailFile] = useState<DataFile | null>(null);
+
+  const handleFileDetail = (file: DataFile) => {
+    setCurrentDetailFile(file);
+    setDetailDrawerOpen(true);
+  };
+
+  const handleFileRename = (fileId: string, newName: string) => {
+    dataCatalog.renameFile(fileId, newName);
+    const updated = dataCatalog.findFileById(fileId);
+    if (updated) {
+      setCurrentDetailFile(updated);
+    }
+  };
+
+  const handleFileMove = (fileId: string, targetFolderId: string) => {
+    const success = dataCatalog.moveFile(fileId, targetFolderId);
+    if (success) {
+      const updated = dataCatalog.findFileById(fileId);
+      if (updated) {
+        setCurrentDetailFile(updated);
+      }
+    }
+  };
+
+  const handleFileDelete = (fileId: string) => {
+    console.log('Delete file:', fileId);
+  };
+
   const confirmDeleteTask = () => {
     if (pendingDeleteTaskId) {
       closeTask(pendingDeleteTaskId);
@@ -286,9 +320,13 @@ export default function Home() {
     return (
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
+          store={dataCatalog}
           onExportClick={handleExportClick}
           onLayerSelect={setSelectedLayerName}
           onUploadClick={handleUploadClick}
+          onFileDetail={handleFileDetail}
+          onFileMove={handleFileMove}
+          onFileDelete={handleFileDelete}
         />
         <div className="flex-1 relative">
           <MapView
@@ -425,6 +463,18 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 数据详情抽屉 */}
+      {activeNav === '数据管理' && (
+        <DataDetailDrawer
+          isOpen={detailDrawerOpen}
+          file={currentDetailFile}
+          store={dataCatalog}
+          onClose={() => setDetailDrawerOpen(false)}
+          onRename={handleFileRename}
+          onMove={handleFileMove}
+        />
       )}
     </div>
   );
